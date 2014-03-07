@@ -6,6 +6,101 @@ interface QuestionInfo {
 }
 
 /**
+ * Represents a unique coordinate on the spreadsheet.
+ */
+interface SpreadsheetCoordinate {
+  x: number;
+  y: number;
+  worksheet: string;
+}
+
+interface RealQuestionInfo {
+  errors: {
+    x: number;
+    y: number;
+    worksheet: string;
+    orig: string;
+    err: string;
+    outputs: {
+      x: number;
+      y: number;
+      worksheet: string;
+      noerr: string;
+    }[];
+  }[];
+  outputs: {
+    x: number;
+    y: number;
+    worksheet: string;
+    orig: string;
+    err: string;
+  }[];
+}
+
+var sampleRealQuestion: RealQuestionInfo = {
+  "errors": [
+    {
+      "x": 1,
+      "y": 1,
+      "worksheet": "sheet1",
+      "orig": "12.343",
+      "err": "123.43",
+      "outputs": [
+        {
+          "x": 6,
+          "y": 7,
+          "worksheet": "sheet1",
+          "noerr": "62.11"
+        },
+        {
+          "x": 7,
+          "y": 7,
+          "worksheet": "sheet1",
+          "noerr": "99.0"
+        }
+      ]
+    },
+    {
+      "x": 1,
+      "y": 2,
+      "worksheet": "sheet1",
+      "orig": "10.0",
+      "err": "1.0",
+      "outputs": [
+        {
+          "x": 6,
+          "y": 7,
+          "worksheet": "sheet1",
+          "noerr": "0.0"
+        },
+        {
+          "x": 7,
+          "y": 7,
+          "worksheet": "sheet1",
+          "noerr": "99.0"
+        }
+      ]
+    }
+  ],
+  "outputs": [
+    {
+      "x": 6,
+      "y": 7,
+      "worksheet": "sheet1",
+      "orig": "0.0",
+      "err": "100"
+    },
+    {
+      "x": 7,
+      "y": 7,
+      "worksheet": "sheet1",
+      "orig": "3.14159265359",
+      "err": "99.0"
+    }
+  ]
+};
+
+/**
  * Converts a number into an Excel column ID.
  * e.g. 0 => A, 26 => AA.
  */
@@ -58,6 +153,7 @@ class CheckCellQuestion {
 
     td = document.createElement('td');
     td.innerText = "" + rowId;
+    td.classList.add('header');
     tr.appendChild(td);
     for (i = 0; i < row.length; i++) {
       td = document.createElement('td');
@@ -76,9 +172,13 @@ class CheckCellQuestion {
       th: HTMLTableHeaderCellElement;
 
     // Construct header.
-    tr.appendChild(document.createElement('th'));
+    th = document.createElement('th');
+    th.classList.add('header');
+    th.classList.add('rowHeaderHeader');
+    tr.appendChild(th);
     for (i = 0; i < this.width; i++) {
       th = document.createElement('th');
+      th.classList.add('header');
       th.innerText = getExcelColumn(i);
       tr.appendChild(th);
     }

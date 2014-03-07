@@ -1,16 +1,29 @@
-﻿th {
+﻿.header {
     text-align: center;
-    border: 1px solid black;
+    border: 1px solid  #7e7d68;
     background: #e5e4e8;
+}
+
+th.header {
+    min-width: 65px;
+}
+
+td.header {
+    min-width: 28px;
+    font-weight: bold;
+}
+
+th.rowHeaderHeader {
+    min-width: 28px;
 }
 
 td {
     text-align: right;
-    border: 1px solid black;
+    border: 1px solid #c0c0c0;
 }
 
 table {
-    border: 1px solid black;
+    border: 1px solid #c0c0c0;
     border-collapse: collapse;
 }
 
