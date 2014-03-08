@@ -22,8 +22,16 @@ td {
     border: 1px solid #c0c0c0;
 }
 
+td.erroneous {
+    background: #ff0000;
+}
+
 table {
     border: 1px solid #c0c0c0;
     border-collapse: collapse;
+}
+
+.errorTab {
+    background: #ff0000 !important;
 }
 
