@@ -173,6 +173,7 @@ interface DDItem {
    * highlighted or not.
    */
   isValueErroneous(): boolean;
+  getCoords(): SpreadsheetCoordinate;
 }
 
 class ChangeObservable<T> {
@@ -210,12 +211,14 @@ class OutputItem extends ChangeObservable<OutputItem> implements DDItem {
   private dependencies: InputItem[] = [];
   private status: OutputStatus = OutputStatus.ERR;
   private custom: string = "";
+  private coords: SpreadsheetCoordinate;
 
   constructor(data: OutputInfo) {
     super(['changed']);
     // Coordinate information is represented in the graph.
     this.orig = data.orig;
     this.err = data.err;
+    this.coords = data;
   }
 
   /**
@@ -273,6 +276,10 @@ class OutputItem extends ChangeObservable<OutputItem> implements DDItem {
   public isValueErroneous(): boolean {
     return this.status === OutputStatus.ERR;
   }
+
+  public getCoords(): SpreadsheetCoordinate {
+    return this.coords;
+  }
 }
 
 /**
@@ -286,6 +293,8 @@ class InputItem extends ChangeObservable<InputItem> implements DDItem {
     output: OutputItem;
   }[] = [];
   private shouldDisplayError: boolean = true;
+  private coords: SpreadsheetCoordinate;
+  private rank: number = -1;
 
   /**
    * Constructs an InputInfo object. Uses the data dependency graph to update
@@ -296,6 +305,7 @@ class InputItem extends ChangeObservable<InputItem> implements DDItem {
     var i: number, item: OutputItem;
     this.orig = data.orig;
     this.err = data.err;
+    this.coords = data;
 
     for (i = 0; i < data.outputs.length; i++) {
       // Grab each item, create two-way links.
@@ -321,6 +331,12 @@ class InputItem extends ChangeObservable<InputItem> implements DDItem {
     return this.shouldDisplayError;
   }
 
+  public setRank(rank: number) {
+    this.rank = rank;
+  }
+
+  public getRank(): number { return this.rank; }
+
   /**
    * Changes the value of this input item.
    */
@@ -335,6 +351,9 @@ class InputItem extends ChangeObservable<InputItem> implements DDItem {
     return this.dependents.slice(0);
   }
 
+  public getCoords(): SpreadsheetCoordinate {
+    return this.coords;
+  }
 }
 
 /**
@@ -370,11 +389,6 @@ class DataDependencyGraph {
       this.addItem(errors[i], item);
       this.inputs.push(item);
     }
-
-    // @todo: The below things.
-    // Compact each spreadsheet; eliminate whitespace.
-    // 1. Collapse multiple empty rows into a single empty row.
-    // 2. Collapse multiple empty columns into a single empty column.
   }
 
   /**
@@ -552,11 +566,12 @@ class WorksheetTable {
     var cell: HTMLTableCellElement = this.constructBlankCell();
     if (data.getType() === DDType.INPUT) {
       cell.classList.add('ccInput');
+      cell.setAttribute('draggable', 'true');
     } else {
       cell.classList.add('ccOutput');
     }
 
-    // Only listen for clicks on input cells.
+    // Only listen for clicks and drags on input cells.
     if (data.getType() === DDType.INPUT) {
       cell.addEventListener('click', (ev) => {
         if (data.isValueErroneous()) {
@@ -681,6 +696,10 @@ class CheckCellQuestion {
   private disabledError: InputItem = null;
   private toggleButton: HTMLButtonElement;
 
+  // Used for drag n' drop events.
+  private rankTable: HTMLTableElement = document.createElement('table');
+  private unimportantTable: HTMLTableElement = document.createElement('table');
+
   /**
    * @param data The JSON object with the question information.
    * @param divId The ID of the div where the question should be injected.
@@ -703,6 +722,57 @@ class CheckCellQuestion {
     this.parentDiv = <HTMLDivElement> document.getElementById(divId);
     this.parentDiv.appendChild(this.divElement);
 
+    // Ranking table.
+    var i: number,
+      inputCount: number = this.graph.getInputs().length,
+      tr = document.createElement('tr'), th: HTMLTableHeaderCellElement,
+      td: HTMLTableCellElement;
+
+    this.rankTable.classList.add('ccRankTable');
+    th = document.createElement('th');
+    th.colSpan = 2;
+    th.innerText = "Ranked Inputs";
+    th.classList.add('ccRankTable');
+    tr.appendChild(th);
+    tr.classList.add('ccRankTable');
+    this.rankTable.appendChild(tr);
+    for (i = 0; i < inputCount; i++) {
+      tr = document.createElement('tr');
+      tr.classList.add('ccRankTable');
+      td = document.createElement('td');
+      td.classList.add('ccRankTable');
+      td.innerText = "" + (i + 1);
+      tr.appendChild(td);
+      td = document.createElement('td');
+      td.classList.add('ccRankTable');
+      td.classList.add('ccDroppableSlot');
+      // XXX: Add drop shenanigans here.
+      tr.appendChild(td);
+      this.rankTable.appendChild(tr);
+    }
+    this.parentDiv.appendChild(this.rankTable);
+
+    // Unimportant table.
+    this.unimportantTable.classList.add('ccUnimportantTable');
+    tr = document.createElement('tr');
+    th = document.createElement('th');
+    th.innerText = "Unimportant Inputs";
+    th.classList.add('ccUnimportantTable');
+    tr.appendChild(th);
+    tr.classList.add('ccUnimportantTable');
+    this.unimportantTable.appendChild(tr);
+    for (i = 0; i < inputCount; i++) {
+      tr = document.createElement('tr');
+      tr.classList.add('ccUnimportantTable');
+      td = document.createElement('td');
+      // XXX: Add drop shenanigans here.
+      td.classList.add('ccUnimportantTable');
+      td.classList.add('ccDroppableSlot');
+      tr.appendChild(td);
+      this.unimportantTable.appendChild(tr);
+    }
+    this.parentDiv.appendChild(this.unimportantTable);
+
     // Button to toggle all errors.
     this.toggleButton = document.createElement('button');
     this.toggleButton.innerText = "Toggle errors off";
@@ -715,6 +785,7 @@ class CheckCellQuestion {
         this.toggleButton.innerText = "Toggle errors off";
       }
     });
+    this.parentDiv.appendChild(document.createElement('br'));
     this.parentDiv.appendChild(this.toggleButton);
   }
 

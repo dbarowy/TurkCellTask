@@ -44,6 +44,16 @@ td.ccInputError {
      background: #ff0000;
 }
 
+/* Draggable input cells */
+td.ccInputDraggable {
+    cursor: move;
+}
+
+/* Input cells, once they can no longer be dragged. */
+td.ccInputUndraggable {
+    color: #808080;
+}
+
 /* Output cells */
 td.ccOutput {
 
@@ -58,4 +68,45 @@ td.ccOutputError {
 a.ccWsTabChange {
     color: #ff0000 !important;
     font-weight: bold;
+}
+
+table.ccRankTable {
+
+}
+
+table.ccUnimportantTable {
+
+}
+
+tr.ccRankTable {
+
+}
+
+th.ccRankTable {
+
+}
+
+td.ccRankTable {
+
+}
+
+td.ccDroppableSlot {
+
+}
+
+td.ccDropoverSlot {
+
+}
+
+/* Drag n' drop magick */
+
+/* Prevent the text contents of draggable elements from being selectable. */
+[draggable] {
+  -moz-user-select: none;
+  -khtml-user-select: none;
+  -webkit-user-select: none;
+  user-select: none;
+  /* Required to make elements draggable in old WebKit */
+  -khtml-user-drag: element;
+  -webkit-user-drag: element;
 }
