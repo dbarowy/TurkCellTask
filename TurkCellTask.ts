@@ -679,6 +679,7 @@ class CheckCellQuestion {
   private status: SpreadsheetStatus = SpreadsheetStatus.ALL_ERRORS;
   private tables: { [ws: string]: WorksheetTable } = {};
   private disabledError: InputItem = null;
+  private toggleButton: HTMLButtonElement;
 
   /**
    * @param data The JSON object with the question information.
@@ -703,12 +704,18 @@ class CheckCellQuestion {
     this.parentDiv.appendChild(this.divElement);
 
     // Button to toggle all errors.
-    var vladimirButin = document.createElement('button');
-    vladimirButin.innerText = "Toggle all errors";
-    vladimirButin.addEventListener('click', (ev): void => {
-      this.changeStatus(this.status === SpreadsheetStatus.ALL_ERRORS ? SpreadsheetStatus.NO_ERRORS : SpreadsheetStatus.ALL_ERRORS);
+    this.toggleButton = document.createElement('button');
+    this.toggleButton.innerText = "Toggle errors off";
+    this.toggleButton.addEventListener('click', (ev): void => {
+      if (this.toggleButton.innerText === 'Toggle errors off') {
+        this.changeStatus(SpreadsheetStatus.NO_ERRORS);
+        this.toggleButton.innerText = "Toggle errors on";
+      } else {
+        this.changeStatus(SpreadsheetStatus.ALL_ERRORS);
+        this.toggleButton.innerText = "Toggle errors off";
+      }
     });
-    this.parentDiv.appendChild(vladimirButin);
+    this.parentDiv.appendChild(this.toggleButton);
   }
 
   private getWorksheetTab(wsName: string): HTMLAnchorElement {
