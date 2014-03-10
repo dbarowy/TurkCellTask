@@ -543,14 +543,23 @@ class WorksheetTable extends ChangeObservable<WorksheetTable> {
     assert(this.errorCount >= 0);
   }
 
+  private constructBlankCell(): HTMLTableCellElement {
+    var td = document.createElement('td');
+    td.classList.add('ccMain');
+    return td;
+  }
+
   private constructCell(data: DDItem): HTMLTableCellElement {
-    var cell: HTMLTableCellElement = document.createElement('td');
+    var cell: HTMLTableCellElement = this.constructBlankCell();
     if (data.getType() === DDType.INPUT) {
-      cell.classList.add('input');
+      cell.classList.add('ccInput');
+    } else {
+      cell.classList.add('ccOutput');
     }
 
-    cell.addEventListener('click', (ev) => {
-      if (data.getType() === DDType.INPUT) {
+    // Only listen for clicks on input cells.
+    if (data.getType() === DDType.INPUT) {
+      cell.addEventListener('click', (ev) => {
         if (data.isValueErroneous()) {
           // Input item is erroneous and the user clicked on it.
           // Transition to a state where it is not erroneous.
@@ -561,21 +570,23 @@ class WorksheetTable extends ChangeObservable<WorksheetTable> {
           // erroneous.
           this.question.changeStatus(SpreadsheetStatus.ALL_ERRORS);
         }
-      }
-    });
+        // Ignore clicks when all errors are off.
+      });
+    }
 
     // Change events can be triggered by the global spreadsheet, *or* by the
     // above click handler.
+    var errorStyle: string = data.getType() === DDType.INPUT ? 'ccInputError' : 'ccOutputError';
     data.addEventListener('changed', (data: DDItem) => {
       // Update displayed value.
       cell.innerText = data.getValue();
       if (data.isValueErroneous()) {
         // Add the 'erroneous' style.
-        cell.classList.add('erroneous');
+        cell.classList.add(errorStyle);
         this.errorDelta(1);
       } else {
         // Remove the 'erroneous' style.
-        cell.classList.remove('erroneous');
+        cell.classList.remove(errorStyle);
         this.errorDelta(-1);
       }
     });
@@ -591,15 +602,15 @@ class WorksheetTable extends ChangeObservable<WorksheetTable> {
     var tr: HTMLTableRowElement = document.createElement('tr'),
       td: HTMLTableCellElement, i: number, item: DDItem;
 
-    td = document.createElement('td');
+    td = this.constructBlankCell();
     td.innerText = "" + (rowId - 1);
-    td.classList.add('header');
+    td.classList.add('ccHeader');
     tr.appendChild(td);
     // XXX: Excel is 1-indexed. Ignore the 0th cell.
     for (i = 1; i < this.width; i++) {
       item = row[i];
       if (typeof item === 'undefined') {
-        tr.appendChild(document.createElement('td'));
+        tr.appendChild(this.constructBlankCell());
       } else {
         tr.appendChild(this.constructCell(item));
       }
@@ -615,15 +626,19 @@ class WorksheetTable extends ChangeObservable<WorksheetTable> {
       i: number, tr: HTMLTableRowElement = document.createElement('tr'),
       th: HTMLTableHeaderCellElement;
 
+    table.classList.add('ccMain');
+
     // Construct header.
     th = document.createElement('th');
-    th.classList.add('header');
-    th.classList.add('rowHeaderHeader');
+    th.classList.add('ccMain');
+    th.classList.add('ccHeader');
+    th.classList.add('ccRowHeaderHeader');
     tr.appendChild(th);
     // XXX: Excel is 1-indexed.
     for (i = 1; i < this.width; i++) {
       th = document.createElement('th');
-      th.classList.add('header');
+      th.classList.add('ccMain');
+      th.classList.add('ccHeader');
       th.innerText = getExcelColumn(i-1);
       tr.appendChild(th);
     }
