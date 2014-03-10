@@ -525,6 +525,7 @@ class WorksheetTable extends ChangeObservable<WorksheetTable> {
   }
 
   private errorDelta(change: number) {
+    return;
     // We use errorCount as a semaphore. When it goes to 0, the worksheet no
     // longer contains errors. When it goes above 0, the worksheet now has
     // errors.
@@ -550,9 +551,8 @@ class WorksheetTable extends ChangeObservable<WorksheetTable> {
 
     cell.addEventListener('click', (ev) => {
       if (data.getType() === DDType.INPUT) {
-        if (data.isValueErroneous() || this.question.getStatus() === SpreadsheetStatus.NO_ERRORS) {
-          // Input item is erroneous and the user clicked on it. OR no items
-          // are erroneous, and a user clicked on it.
+        if (data.isValueErroneous()) {
+          // Input item is erroneous and the user clicked on it.
           // Transition to a state where it is not erroneous.
           this.question.changeStatus(SpreadsheetStatus.ALL_BUT_ONE_ERROR, <InputItem> data);
         } else if (this.question.getStatus() === SpreadsheetStatus.ALL_BUT_ONE_ERROR) {
