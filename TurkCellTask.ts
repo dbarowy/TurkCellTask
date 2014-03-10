@@ -493,10 +493,12 @@ class DataDependencyGraph {
  * Represents a single worksheet within a CheckCellQuestion. Each question may
  * have multiple worksheets.
  */
-class WorksheetTable extends ChangeObservable<WorksheetTable> {
+class WorksheetTable {
   private containsErrors: boolean = false;
   private tableDiv: HTMLDivElement = document.createElement('div');
   private errorCount: number = 0;
+  private tabAnchorElement: HTMLAnchorElement = null;
+  private tabHighlighted: boolean = false;
 
   /**
    * @param data The data to display in the worksheet.
@@ -508,7 +510,6 @@ class WorksheetTable extends ChangeObservable<WorksheetTable> {
    */
   constructor(private question: CheckCellQuestion, private name: string, private data: DDItem[][],
     private width: number, private height: number) {
-    super(['changed']);
       this.tableDiv = document.createElement('div');
       this.tableDiv.appendChild(this.constructTable());
       this.tableDiv.classList.add('tabbertab');
@@ -524,23 +525,21 @@ class WorksheetTable extends ChangeObservable<WorksheetTable> {
     return this.tableDiv;
   }
 
-  private errorDelta(change: number) {
-    return;
-    // We use errorCount as a semaphore. When it goes to 0, the worksheet no
-    // longer contains errors. When it goes above 0, the worksheet now has
-    // errors.
+  public setTabAnchorElement(anchor: HTMLAnchorElement) {
+    this.tabAnchorElement = anchor;
+  }
 
-    // Add *prior* to triggering events so callbacks get correct
-    // 'isDisplayingErrors' value.
-    this.errorCount += change;
-    if ((this.errorCount - change) === 0) {
-      this.fireEvent('changed', this);
-    } else if (this.errorCount === 0) {
-      this.fireEvent('changed', this);
+  public toggleHighlighting(enable: boolean) {
+    if (enable !== this.tabHighlighted) {
+      this.tabHighlighted = enable;
+      if (enable) {
+        this.tabAnchorElement.innerText = this.name + '*';
+        this.tabAnchorElement.classList.add('ccWsTabChange');
+      } else {
+        this.tabAnchorElement.innerText = this.name;
+        this.tabAnchorElement.classList.remove('ccWsTabChange');
+      }
     }
-
-    // Invariant: Error count never goes negative.
-    assert(this.errorCount >= 0);
   }
 
   private constructBlankCell(): HTMLTableCellElement {
@@ -583,12 +582,14 @@ class WorksheetTable extends ChangeObservable<WorksheetTable> {
       if (data.isValueErroneous()) {
         // Add the 'erroneous' style.
         cell.classList.add(errorStyle);
-        this.errorDelta(1);
       } else {
         // Remove the 'erroneous' style.
         cell.classList.remove(errorStyle);
-        this.errorDelta(-1);
       }
+
+      // Highlight our tab if this element is part of a single disabled
+      // error.
+      this.toggleHighlighting((!data.isValueErroneous()) && this.question.getStatus() === SpreadsheetStatus.ALL_BUT_ONE_ERROR);
     });
     // Bootstrap cell value.
     data.fireEvent('changed', data);
@@ -694,9 +695,6 @@ class CheckCellQuestion {
       if (graphData.hasOwnProperty(ws)) {
         var wsTable = new WorksheetTable(this, ws, graphData[ws], width, height);
         this.tables[ws] = wsTable;
-        wsTable.addEventListener('changed', (data: WorksheetTable): void => {
-          this.toggleTabError(data.getName(), data.isDisplayingErrors());
-        });
         this.divElement.appendChild(wsTable.getDiv());
       }
     }
@@ -713,26 +711,30 @@ class CheckCellQuestion {
     this.parentDiv.appendChild(vladimirButin);
   }
 
-  public toggleTabError(tabName: string, isError: boolean): void {
-    // Get the tab element for the worksheet.
+  private getWorksheetTab(wsName: string): HTMLAnchorElement {
+    // Get the tab listing.
     var tabDiv = this.parentDiv.getElementsByClassName('tabberlive');
     assert(tabDiv.length === 1);
-    var tabList: HTMLUListElement = <HTMLUListElement> tabDiv[0].childNodes[0];
-
-    var children = tabList.children, i: number;
+    var tabList: HTMLUListElement = <HTMLUListElement> tabDiv[0].childNodes[0],
+      children = tabList.children, i: number;
     for (i = 0; i < children.length; i++) {
       var child: HTMLUListElement = <HTMLUListElement> children[i],
-        tabLink: HTMLAnchorElement = <HTMLAnchorElement> child.children[0];
-      if (child.innerText === tabName) {
-        if (isError) {
-          tabLink.classList.add('errorTab');
-        } else {
-          tabLink.classList.remove('errorTab');
-        }
-        return;
+        tabAnchor: HTMLAnchorElement = <HTMLAnchorElement> child.children[0];
+      if (tabAnchor.innerText === wsName || tabAnchor.innerText === (wsName + "*")) {
+        return tabAnchor;
       }
     }
-    assert(false, "Couldn't find tab " + tabName);
+    assert(false, "Couldn't find worksheet tab " + wsName);
+  }
+
+  public tabsLoaded() {
+    // Associate WS objects with their tabs.
+    var ws: string;
+    for (ws in this.tables) {
+      if (this.tables.hasOwnProperty(ws)) {
+        this.tables[ws].setTabAnchorElement(this.getWorksheetTab(ws));
+      }
+    }
   }
 
   /**
@@ -793,6 +795,7 @@ declare var tabberAutomatic: Function;
 window.onload = function () {
   var sampleTable = new CheckCellQuestion(sampleQuestion, 'sample');
   tabberAutomatic();
+  sampleTable.tabsLoaded();
 };
 
 // Tabber options

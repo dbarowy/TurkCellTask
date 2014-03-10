@@ -51,7 +51,11 @@ td.ccOutput {
 
 /* Erroneous output cells */
 td.ccOutputError {
-    background: #ff0000;
+    border: 2px solid  #ff0000;
 }
 
-
+/* Style applied to tab text when a change occurs (error -> normal) in a WS */
+a.ccWsTabChange {
+    color: #ff0000 !important;
+    font-weight: bold;
+}
