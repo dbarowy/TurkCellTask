@@ -22,6 +22,11 @@ td {
     border: 1px solid #c0c0c0;
 }
 
+td.input {
+    border: 2px solid black;
+    font-weight: bold;
+}
+
 td.erroneous {
     background: #ff0000;
 }

@@ -161,6 +161,10 @@ interface DDItem {
    */
   addEventListener(type: string, cb: (data: DDItem) => void): void;
   /**
+   * Fires the specified event on the object.
+   */
+  fireEvent(type: string, data: DDItem): void;
+  /**
    * Get the current value of the item.
    */
   getValue(): string;
@@ -204,7 +208,7 @@ class OutputItem extends ChangeObservable<OutputItem> implements DDItem {
   private orig: string;
   private err: string;
   private dependencies: InputItem[] = [];
-  private status: OutputStatus = OutputStatus.ORIG;
+  private status: OutputStatus = OutputStatus.ERR;
   private custom: string = "";
 
   constructor(data: OutputInfo) {
@@ -267,7 +271,7 @@ class OutputItem extends ChangeObservable<OutputItem> implements DDItem {
   }
 
   public isValueErroneous(): boolean {
-    return this.status !== OutputStatus.ORIG;
+    return this.status === OutputStatus.ERR;
   }
 }
 
@@ -281,7 +285,7 @@ class InputItem extends ChangeObservable<InputItem> implements DDItem {
     noerr: string;
     output: OutputItem;
   }[] = [];
-  private shouldDisplayError: boolean = false;
+  private shouldDisplayError: boolean = true;
 
   /**
    * Constructs an InputInfo object. Uses the data dependency graph to update
@@ -318,34 +322,19 @@ class InputItem extends ChangeObservable<InputItem> implements DDItem {
   }
 
   /**
-   * Changes the value of this input item, and, optionally, its dependents.
-   * @param toError Are we displaying an error, or the original value?
-   * @param singleError Are we displaying this input item's error alone (true),
-   *   or are we showing all input errors at once (false)?
+   * Changes the value of this input item.
    */
-  public changeValue(toError: boolean, singleError?: boolean): void {
-    var i: number, savedShouldDisplayError = this.shouldDisplayError;
-    if (toError) {
-      this.shouldDisplayError = true;
-      if (singleError) {
-        for (i = 0; i < this.dependents.length; i++) {
-          // @todo Need to ask Dan about this value. I don't understand why it's
-          // 'noerr' instead of 'err'.
-          this.dependents[i].output.displayCustomValue(this.dependents[i].noerr);
-        }
-      }
-    } else {
-      // No error.
-      this.shouldDisplayError = false;
-      for (i = 0; i < this.dependents.length; i++) {
-        this.dependents[i].output.displayOriginal();
-      }
-    }
-
-    if (this.shouldDisplayError !== savedShouldDisplayError) {
+  public changeValue(toError: boolean): void {
+    if (this.shouldDisplayError !== toError) {
+      this.shouldDisplayError = toError;
       this.valueChanged();
     }
   }
+
+  public getDependents(): { noerr: string; output: OutputItem; }[] {
+    return this.dependents.slice(0);
+  }
+
 }
 
 /**
@@ -555,17 +544,23 @@ class WorksheetTable extends ChangeObservable<WorksheetTable> {
 
   private constructCell(data: DDItem): HTMLTableCellElement {
     var cell: HTMLTableCellElement = document.createElement('td');
+    if (data.getType() === DDType.INPUT) {
+      cell.classList.add('input');
+    }
+
     cell.addEventListener('click', (ev) => {
-      // Check if this is an erroneous value, and store that info.
-      var currentlyError: boolean = data.isValueErroneous();
-      // Clear *all* errors.
-      this.question.clearErrors();
-      // Change value appropriately using the stored information.
-      if (!currentlyError && data.getType() === DDType.INPUT) {
-        // The clicked cell is an input cell, and is was not in an error state.
-        // Change it into an error, and update its dependents.
-        var input: InputItem = <InputItem> data;
-        input.changeValue(true, true);
+      if (data.getType() === DDType.INPUT) {
+        if (data.isValueErroneous() || this.question.getStatus() === SpreadsheetStatus.NO_ERRORS) {
+          // Input item is erroneous and the user clicked on it. OR no items
+          // are erroneous, and a user clicked on it.
+          // Transition to a state where it is not erroneous.
+          this.question.changeStatus(SpreadsheetStatus.ALL_BUT_ONE_ERROR, <InputItem> data);
+        } else if (this.question.getStatus() === SpreadsheetStatus.ALL_BUT_ONE_ERROR) {
+          // Input item is not erroneous, it is the only item not erroneous,
+          // and the user clicked on it. Transition to a state where it is
+          // erroneous.
+          this.question.changeStatus(SpreadsheetStatus.ALL_ERRORS);
+        }
       }
     });
 
@@ -574,7 +569,6 @@ class WorksheetTable extends ChangeObservable<WorksheetTable> {
     data.addEventListener('changed', (data: DDItem) => {
       // Update displayed value.
       cell.innerText = data.getValue();
-      // Fire event if this is an error.
       if (data.isValueErroneous()) {
         // Add the 'erroneous' style.
         cell.classList.add('erroneous');
@@ -585,7 +579,8 @@ class WorksheetTable extends ChangeObservable<WorksheetTable> {
         this.errorDelta(-1);
       }
     });
-    cell.innerText = data.getValue();
+    // Bootstrap cell value.
+    data.fireEvent('changed', data);
     return cell;
   }
 
@@ -597,10 +592,11 @@ class WorksheetTable extends ChangeObservable<WorksheetTable> {
       td: HTMLTableCellElement, i: number, item: DDItem;
 
     td = document.createElement('td');
-    td.innerText = "" + rowId;
+    td.innerText = "" + (rowId - 1);
     td.classList.add('header');
     tr.appendChild(td);
-    for (i = 0; i < this.width; i++) {
+    // XXX: Excel is 1-indexed. Ignore the 0th cell.
+    for (i = 1; i < this.width; i++) {
       item = row[i];
       if (typeof item === 'undefined') {
         tr.appendChild(document.createElement('td'));
@@ -624,14 +620,16 @@ class WorksheetTable extends ChangeObservable<WorksheetTable> {
     th.classList.add('header');
     th.classList.add('rowHeaderHeader');
     tr.appendChild(th);
-    for (i = 0; i < this.width; i++) {
+    // XXX: Excel is 1-indexed.
+    for (i = 1; i < this.width; i++) {
       th = document.createElement('th');
       th.classList.add('header');
-      th.innerText = getExcelColumn(i);
+      th.innerText = getExcelColumn(i-1);
       tr.appendChild(th);
     }
     table.appendChild(tr);
-    for (i = 0; i < this.height; i++) {
+    // XXX: Excel is 1-indexed.
+    for (i = 1; i < this.height; i++) {
       if (i < this.data.length) {
         table.appendChild(this.constructRow(this.data[i], i+1));
       } else {
@@ -640,6 +638,16 @@ class WorksheetTable extends ChangeObservable<WorksheetTable> {
     }
     return table;
   }
+}
+
+/**
+ * The spreadsheet can be in one of three states:
+ * - All errors on (ALL_ERRORS)
+ * - No errors on (NO_ERRORS)
+ * - All but one error on (ALL_BUT_ONE_ERROR)
+ */
+enum SpreadsheetStatus {
+  ALL_ERRORS, NO_ERRORS, ALL_BUT_ONE_ERROR
 }
 
 /**
@@ -652,8 +660,9 @@ class CheckCellQuestion {
   private graph: DataDependencyGraph;
   private parentDiv: HTMLDivElement;
   private divElement: HTMLDivElement;
-  private globalErrors: boolean = false;
+  private status: SpreadsheetStatus = SpreadsheetStatus.ALL_ERRORS;
   private tables: { [ws: string]: WorksheetTable } = {};
+  private disabledError: InputItem = null;
 
   /**
    * @param data The JSON object with the question information.
@@ -684,7 +693,7 @@ class CheckCellQuestion {
     var vladimirButin = document.createElement('button');
     vladimirButin.innerText = "Toggle all errors";
     vladimirButin.addEventListener('click', (ev): void => {
-      this.toggleAllErrors(!this.globalErrors);
+      this.changeStatus(this.status === SpreadsheetStatus.ALL_ERRORS ? SpreadsheetStatus.NO_ERRORS : SpreadsheetStatus.ALL_ERRORS);
     });
     this.parentDiv.appendChild(vladimirButin);
   }
@@ -711,33 +720,56 @@ class CheckCellQuestion {
     assert(false, "Couldn't find tab " + tabName);
   }
 
-  public toggleAllErrors(enable: boolean): void {
-    if (enable !== this.globalErrors) {
-      this.clearErrors();
-      this.globalErrors = enable;
-      var inputs = this.graph.getInputs(),
-        outputs = this.graph.getOutputs(),
-        i: number;
-      for (i = 0; i < inputs.length; i++) {
-        inputs[i].changeValue(this.globalErrors, false);
-      }
-      for (i = 0; i < outputs.length; i++) {
-        enable ? outputs[i].displayError() : outputs[i].displayOriginal();
-      }
+  /**
+   * Change the global status of the spreadsheet.
+   */
+  public changeStatus(status: SpreadsheetStatus, item?: InputItem): void {
+    // Sanity checks.
+    if (status === SpreadsheetStatus.ALL_BUT_ONE_ERROR && item == null) {
+      throw new Error("Item must be specified.");
+    } else if (status !== SpreadsheetStatus.ALL_BUT_ONE_ERROR &&
+      status !== SpreadsheetStatus.ALL_ERRORS && status !== SpreadsheetStatus.NO_ERRORS) {
+        throw new Error("Invalid status: " + status);
     }
+
+    // Transition table time!
+    var i: number, oldStatus: SpreadsheetStatus = this.status,
+      inputs: InputItem[], outputs: OutputItem[], toError: boolean;
+    this.status = status;
+    this.disabledError = null;
+    switch (status) {
+      case SpreadsheetStatus.NO_ERRORS:
+        // INTENTIONAL FALL-THRU
+      case SpreadsheetStatus.ALL_ERRORS:
+        // Just update everything to the correct state.
+        inputs = this.graph.getInputs();
+        outputs = this.graph.getOutputs();
+        toError = status === SpreadsheetStatus.ALL_ERRORS;
+        for (i = 0; i < inputs.length; i++) {
+          inputs[i].changeValue(toError);
+        }
+        for (i = 0; i < outputs.length; i++) {
+          toError ? outputs[i].displayError() : outputs[i].displayOriginal();
+        }
+        break;
+      case SpreadsheetStatus.ALL_BUT_ONE_ERROR:
+        var dependents = item.getDependents();
+        // Change to the ALL_ERROR case, if not already.
+        if (oldStatus !== SpreadsheetStatus.ALL_ERRORS) {
+          this.changeStatus(SpreadsheetStatus.ALL_ERRORS);
+          this.status = status;
+        }
+        item.changeValue(false);
+        for (i = 0; i < dependents.length; i++) {
+          dependents[i].output.displayCustomValue(dependents[i].noerr);
+        }
+        break;
+    }
+    return;
   }
 
-  public clearErrors(): void {
-    var inputs = this.graph.getInputs(), i: number;
-    for (i = 0; i < inputs.length; i++) {
-      if (inputs[i].isValueErroneous()) {
-        inputs[i].changeValue(false);
-      }
-    }
-  }
-
-  public allErrorsEnabled(): boolean {
-    return this.globalErrors;
+  public getStatus(): SpreadsheetStatus {
+    return this.status;
   }
 }
 
