@@ -95,6 +95,35 @@ var sampleQuestion: QuestionInfo = {
           "noerr": "99.0"
         }
       ]
+    },
+    {
+      "x": 1,
+      "y": 4,
+      "worksheet": "sheet1",
+      "orig": "i'mma context cell",
+      "err": "",
+      "outputs": []
+    },
+    {
+      "x": 1,
+      "y": 3,
+      "worksheet": "sheet1",
+      "orig": "i dont matter",
+      "err": "i dont matter",
+      "outputs": [
+        {
+          "x": 6,
+          "y": 7,
+          "worksheet": "sheet1",
+          "noerr": "0.0"
+        },
+        {
+          "x": 7,
+          "y": 7,
+          "worksheet": "sheet2",
+          "noerr": "99.0"
+        }
+      ]
     }
   ],
   "outputs": [
@@ -329,6 +358,10 @@ class InputItem extends ChangeObservable<InputItem> implements DDItem {
         output: item
       });
     }
+
+    if (this.isContext()) {
+      this.shouldDisplayError = false;
+    }
   }
 
   public setDraggable(draggable: boolean) {
@@ -369,6 +402,13 @@ class InputItem extends ChangeObservable<InputItem> implements DDItem {
   public getCoords(): SpreadsheetCoordinate {
     return this.coords;
   }
+
+  /**
+   * Is this item a context item, e.g. it's not an item that needs to be ranked?
+   */
+  public isContext(): boolean {
+    return this.orig === this.err || this.dependents.length === 0;
+  }
 }
 
 /**
@@ -402,7 +442,9 @@ class DataDependencyGraph {
       // together.
       var item: InputItem = new InputItem(this, errors[i]);
       this.addItem(errors[i], item);
-      this.inputs.push(item);
+      if (!item.isContext()) {
+        this.inputs.push(item);
+      }
     }
   }
 
@@ -577,9 +619,8 @@ class WorksheetTable {
       cell.addClass('ccOutput');
     }
 
-    // Only listen for clicks and drags on input cells.
-    if (data.getType() === DDType.INPUT) {
-
+    // Only listen for clicks and drags on non-context input cells.
+    if (data.getType() === DDType.INPUT && !(<InputItem>data).isContext()) {
       cell.on('click', (ev) => {
         if (data.isValueErroneous()) {
           // Input item is erroneous and the user clicked on it.
@@ -618,16 +659,24 @@ class WorksheetTable {
 
     // Change events can be triggered by the global spreadsheet, *or* by the
     // above click handler.
-    var errorStyle: string = data.getType() === DDType.INPUT ? 'ccInputError' : 'ccOutputError';
     data.addEventListener('changed', (data: DDItem) => {
       // Update displayed value.
       cell.text(data.getValue());
-      if (data.isValueErroneous()) {
-        // Add the 'erroneous' style.
-        cell.addClass(errorStyle);
+      if (data.getType() === DDType.INPUT) {
+        if (data.isValueErroneous()) {
+          // Add the 'erroneous' style.
+          cell.addClass('ccInputError');
+        } else {
+          // Remove the 'erroneous' style.
+          cell.removeClass('ccInputError');
+        }
       } else {
-        // Remove the 'erroneous' style.
-        cell.removeClass(errorStyle);
+        // Check if we are in NO_ERROR or ALL_BUT_ONE_ERROR.
+        if (this.question.getStatus() !== SpreadsheetStatus.ALL_ERRORS) {
+          cell.addClass('ccOutputChange');
+        } else {
+          cell.removeClass('ccOutputChange');
+        }
       }
 
       // Highlight our tab if this element is part of a single disabled
@@ -758,7 +807,7 @@ class CheckCellQuestion {
     this.questionDiv.tabs();
 
     // Ranking table.
-    var sharedListClass = 'dragList' + nextId(),
+    var sharedListClass = 'dragList' + nextId(), self = this,
       ul = $('<ul>')
         .addClass(sharedListClass)
         .sortable({
@@ -767,7 +816,7 @@ class CheckCellQuestion {
         }),
       dropHandler = function (e, ui) {
         // Only append if this is a child element of the question div.
-        if ($(ui.draggable).closest('.ccMain').length > 0) {
+        if ($(ui.draggable).closest('#' + self.divId).length > 0) {
           var item: InputItem = ui.helper.data('DDItem'),
             helper: JQuery = ui.helper;
           $($(this).find('ul')[0]).append($('<li>').text(helper.text()).addClass('ccListItem'));
@@ -952,5 +1001,6 @@ class CheckCellQuestion {
 
 window.onload = function () {
   var sampleTable = new CheckCellQuestion(sampleQuestion, 'sample');
+  // new CheckCellQuestion(sampleQuestion, 'sample2');
 };
 

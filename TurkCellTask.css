@@ -35,8 +35,7 @@ th.ccRowHeaderHeader {
 
 /* Input cells */
 td.ccInput {
-    border: 2px solid black;
-    font-weight: bold;
+
 }
 
 /* Erroneous input cells */
@@ -57,12 +56,12 @@ td.ccInputUndraggable {
 
 /* Output cells */
 td.ccOutput {
-
+    border: 2px solid black;
 }
 
 /* Erroneous output cells */
-td.ccOutputError {
-    border: 2px solid  #ff0000;
+td.ccOutputChange {
+    background-color: yellow;
 }
 
 /* Style applied to tab text when a change occurs (error -> normal) in a WS */
