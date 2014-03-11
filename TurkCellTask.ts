@@ -718,8 +718,10 @@ class WorksheetTable {
         // Check if we are in NO_ERROR or ALL_BUT_ONE_ERROR.
         if (this.question.getStatus() !== SpreadsheetStatus.ALL_ERRORS) {
           cell.addClass('ccOutputChange');
+          this.question.addToChangeList(<OutputItem>data);
         } else {
           cell.removeClass('ccOutputChange');
+          this.question.removeFromChangeList(<OutputItem>data);
         }
       }
 
@@ -813,6 +815,9 @@ class CheckCellQuestion {
   private rankListDiv: JQuery;
   private unimportantListDiv: JQuery;
 
+  // Displays changed cells.
+  private changeListDiv: JQuery;
+
   /**
    * @param data The JSON object with the question information.
    * @param divId The ID of the div where the question should be injected.
@@ -847,6 +852,12 @@ class CheckCellQuestion {
     this.parentDiv = $('#' + divId).append(this.questionDiv);
     // Enable tabs.
     this.questionDiv.tabs();
+
+    this.changeListDiv = $('<div>')
+      .addClass('changeList')
+      .append($('<h5>Changed Outputs</h5>'))
+      .append($('<ul>'));
+    this.parentDiv.append(this.changeListDiv);
 
     // Ranking table.
     var sharedListClass = 'dragList' + nextId(), self = this,
@@ -922,6 +933,23 @@ class CheckCellQuestion {
         }
       });
     this.parentDiv.append(validateBtn);
+  }
+
+  public addToChangeList(output: OutputItem): void {
+    var changeList = this.changeListDiv.find('ul'),
+      coords = coords2string(output.getCoords());
+    if (changeList.find("li:contains('" + coords + "')").length === 0) {
+      changeList.append($('<li>').text(coords));
+    }
+  }
+
+  public removeFromChangeList(output: OutputItem): void {
+    // Race condition avoidance.
+    if (typeof this.changeListDiv === 'undefined') return;
+    var changeList = this.changeListDiv.find('ul'),
+      coords = coords2string(output.getCoords());
+
+    changeList.find("li:contains('" + coords + "')").remove();
   }
 
   public getRanking(): { unimportant: SpreadsheetCoordinate[]; ranking: SpreadsheetCoordinate[] } {
