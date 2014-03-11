@@ -133,7 +133,9 @@ ul.ccTabList li.ui-tabs-active a:hover
 
 div.ccRankList {
     display: inline-block;
+    vertical-align: top;
     margin: 5px;
+    width: 250px;
 }
 
 div.ccRankList h4 {
@@ -143,25 +145,33 @@ div.ccRankList h4 {
 div.ccRankList ul {
     padding: 5px;
     background-color: #c0c0c0;
+    min-height: 1em;
 }
 
 div.ccUnimportantList {
     display: inline-block;
+    vertical-align: top;
     margin: 5px;
+    width: 250px;
 }
 
-div.ccUnimportandList h4 {
+div.ccUnimportantList h4 {
     text-align: center;
 }
 
 div.ccUnimportantList ul {
     padding: 5px;
     background-color: #c0c0c0;
+    min-height: 1em;
 }
 
 li.ccListItem {
     list-style: none;
     cursor: move;
+}
+
+div.ccListsDiv {
+
 }
 
 .ccPlaceholder {

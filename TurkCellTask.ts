@@ -764,18 +764,6 @@ class CheckCellQuestion {
 
     // Ranking table.
     var sharedListClass = 'dragList' + nextId(), self = this,
-      ul = $('<ul>')
-        .addClass(sharedListClass)
-        .sortable({
-          revert: 'false',
-          connectWith: '.' + sharedListClass,
-          placeholder: 'ccPlaceholder'
-        })
-        .droppable({
-          tolerance: 'pointer',
-          accept: () => { return true; },
-          drop: dropHandler
-        }),
       dropHandler = function (e, ui) {
         // Only append if this is a child element of the question div.
         if ($(ui.draggable).closest('#' + self.questionDiv.attr('id')).length > 0) {
@@ -790,8 +778,19 @@ class CheckCellQuestion {
     this.rankListDiv = $('<div>')
       .addClass('ccRankList')
       .append($('<h4>Ranked List</h4>'))
-      .append(ul);
-    this.parentDiv.append(this.rankListDiv);
+      .append($('<ul>')
+        .addClass(sharedListClass)
+        .sortable({
+          revert: 'false',
+          connectWith: '.' + sharedListClass,
+          placeholder: 'ccPlaceholder'
+        })
+        .droppable({
+          tolerance: 'pointer',
+          accept: () => { return true; },
+          drop: dropHandler
+        })
+      );
 
     // Unimportant table.
     this.unimportantListDiv = $('<div>')
@@ -810,7 +809,12 @@ class CheckCellQuestion {
           drop: dropHandler
         })
       );
-    this.parentDiv.append(this.unimportantListDiv);
+
+    // Encapsulate both into a master div.
+    this.parentDiv.append($('<div>')
+      .addClass('ccListsDiv')
+      .append(this.rankListDiv)
+      .append(this.unimportantListDiv));
 
     // Button to toggle all errors.
     this.toggleButton = $('<button>')
