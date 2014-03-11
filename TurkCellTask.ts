@@ -21,24 +21,37 @@ interface SpreadsheetCoordinate {
   worksheet: string;
 }
 
-/**
- * Represents spreadsheet *outputs*.
- */
-interface OutputInfo extends SpreadsheetCoordinate {
+interface CellInfo extends SpreadsheetCoordinate {
   orig: string;
   err: string;
 }
 
 /**
+ * Represents spreadsheet *outputs*.
+ */
+interface OutputInfo extends CellInfo {
+  formula: string;
+}
+
+/**
  * Represents spreadsheet *inputs*.
  */
-interface InputInfo extends OutputInfo {
+interface InputInfo extends CellInfo {
   outputs: {
     x: number;
     y: number;
     worksheet: string;
     noerr: string;
   }[];
+  style: CellStyle;
+}
+
+interface CellStyle {
+  bold: boolean;
+  italic: boolean;
+  underline: boolean;
+  'font-face': string;
+  'font-size': number;
 }
 
 /**
@@ -70,15 +83,22 @@ var sampleQuestion: QuestionInfo = {
         {
           "x": 7,
           "y": 7,
-          "worksheet": "sheet2",
+          "worksheet": "sheet1",
           "noerr": "99.0"
         }
-      ]
+      ],
+      "style": {
+        "bold": true,
+        "italic": false,
+        "underline": false,
+        "font-face": "Arial",
+        "font-size": 12
+      }
     },
     {
       "x": 1,
       "y": 2,
-      "worksheet": "sheet1",
+      "worksheet": "fun",
       "orig": "10.0",
       "err": "1.0",
       "outputs": [
@@ -91,39 +111,32 @@ var sampleQuestion: QuestionInfo = {
         {
           "x": 7,
           "y": 7,
-          "worksheet": "sheet2",
+          "worksheet": "sheet1",
           "noerr": "99.0"
         }
-      ]
-    },
-    {
-      "x": 1,
-      "y": 4,
-      "worksheet": "sheet1",
-      "orig": "i'mma context cell",
-      "err": "",
-      "outputs": []
+      ],
+      "style": {
+        "bold": false,
+        "italic": false,
+        "underline": false,
+        "font-face": "Wingdings",
+        "font-size": 11
+      }
     },
     {
       "x": 1,
       "y": 3,
-      "worksheet": "sheet1",
-      "orig": "i dont matter",
-      "err": "i dont matter",
-      "outputs": [
-        {
-          "x": 6,
-          "y": 7,
-          "worksheet": "sheet1",
-          "noerr": "0.0"
-        },
-        {
-          "x": 7,
-          "y": 7,
-          "worksheet": "sheet2",
-          "noerr": "99.0"
-        }
-      ]
+      "worksheet": "fun",
+      "orig": "10.0",
+      "err": "10.0",
+      "outputs": [],
+      "style": {
+        "bold": false,
+        "italic": false,
+        "underline": false,
+        "font-face": "Wingdings",
+        "font-size": 11
+      }
     }
   ],
   "outputs": [
@@ -132,14 +145,16 @@ var sampleQuestion: QuestionInfo = {
       "y": 7,
       "worksheet": "sheet1",
       "orig": "0.0",
-      "err": "100"
+      "err": "100",
+      "formula": "=SUM(A1:A10)"
     },
     {
       "x": 7,
       "y": 7,
-      "worksheet": "sheet2",
+      "worksheet": "sheet1",
       "orig": "3.14159265359",
-      "err": "99.0"
+      "err": "99.0",
+      "formula": "=AVERAGE(Z22:Z23)"
     }
   ]
 };
@@ -246,18 +261,12 @@ enum OutputStatus { ORIG, ERR, CUSTOM }
  * Object instantiation of an OutputInfo from the JSON structure.
  */
 class OutputItem extends ChangeObservable<OutputItem> implements DDItem {
-  private orig: string;
-  private err: string;
   private dependencies: InputItem[] = [];
   private status: OutputStatus = OutputStatus.ERR;
   private custom: string = "";
-  private coords: SpreadsheetCoordinate;
 
-  constructor(data: OutputInfo) {
+  constructor(private data: OutputInfo) {
     super(['changed']);
-    this.orig = data.orig;
-    this.err = data.err;
-    this.coords = data;
   }
 
   /**
@@ -275,9 +284,9 @@ class OutputItem extends ChangeObservable<OutputItem> implements DDItem {
   public getValue(): string {
     switch (this.status) {
       case OutputStatus.ORIG:
-        return this.orig;
+        return this.data.orig;
       case OutputStatus.ERR:
-        return this.err;
+        return this.data.err;
       case OutputStatus.CUSTOM:
         return this.custom;
       default:
@@ -317,7 +326,15 @@ class OutputItem extends ChangeObservable<OutputItem> implements DDItem {
   }
 
   public getCoords(): SpreadsheetCoordinate {
-    return this.coords;
+    return {
+      worksheet: this.data.worksheet,
+      x: this.data.x,
+      y: this.data.y
+    };
+  }
+
+  public getFormula(): string {
+    return this.data.formula;
   }
 }
 
@@ -325,26 +342,20 @@ class OutputItem extends ChangeObservable<OutputItem> implements DDItem {
  * Object instantiation of an InputInfo from the JSON structure.
  */
 class InputItem extends ChangeObservable<InputItem> implements DDItem {
-  private orig: string;
-  private err: string;
   private dependents: {
     noerr: string;
     output: OutputItem;
   }[] = [];
   private shouldDisplayError: boolean = true;
-  private coords: SpreadsheetCoordinate;
   private draggable: boolean = true;
 
   /**
    * Constructs an InputInfo object. Uses the data dependency graph to update
    * *outputs* with data dependencies.
    */
-  constructor(graph: DataDependencyGraph, data: InputInfo) {
+  constructor(graph: DataDependencyGraph, private data: InputInfo) {
     super(['changed', 'draggableChanged']);
     var i: number, item: OutputItem;
-    this.orig = data.orig;
-    this.err = data.err;
-    this.coords = data;
 
     for (i = 0; i < data.outputs.length; i++) {
       // Grab each item, create two-way links.
@@ -376,7 +387,7 @@ class InputItem extends ChangeObservable<InputItem> implements DDItem {
   }
 
   public getType(): DDType { return DDType.INPUT; }
-  public getValue(): string { return this.shouldDisplayError ? this.err : this.orig; }
+  public getValue(): string { return this.shouldDisplayError ? this.data.err : this.data.orig; }
   private valueChanged(): void {
     this.fireEvent('changed', this);
   }
@@ -400,14 +411,22 @@ class InputItem extends ChangeObservable<InputItem> implements DDItem {
   }
 
   public getCoords(): SpreadsheetCoordinate {
-    return this.coords;
+    return {
+      worksheet: this.data.worksheet,
+      x: this.data.x,
+      y: this.data.y
+    };
   }
 
   /**
    * Is this item a context item, e.g. it's not an item that needs to be ranked?
    */
   public isContext(): boolean {
-    return this.orig === this.err || this.dependents.length === 0;
+    return this.data.orig === this.data.err || this.dependents.length === 0;
+  }
+  
+  public getStyle(): CellStyle {
+    return this.data.style;
   }
 }
 
@@ -620,41 +639,62 @@ class WorksheetTable {
     }
 
     // Only listen for clicks and drags on non-context input cells.
-    if (data.getType() === DDType.INPUT && !(<InputItem>data).isContext()) {
-      cell.on('click', (ev) => {
-        if (data.isValueErroneous()) {
-          // Input item is erroneous and the user clicked on it.
-          // Transition to a state where it is not erroneous.
-          this.question.changeStatus(SpreadsheetStatus.ALL_BUT_ONE_ERROR, <InputItem> data);
-        } else if (this.question.getStatus() === SpreadsheetStatus.ALL_BUT_ONE_ERROR) {
-          // Input item is not erroneous, it is the only item not erroneous,
-          // and the user clicked on it. Transition to a state where it is
-          // erroneous.
-          this.question.changeStatus(SpreadsheetStatus.ALL_ERRORS);
+    if (data.getType() === DDType.INPUT) {
+      var input: InputItem = <InputItem> data;
+      if (input.isContext()) {
+        // Properly item style.
+        var style = input.getStyle();
+        if (style.bold) {
+          cell.css('font-weight', 'bold');
         }
-        // Ignore clicks when all errors are off.
-      });
-
-      data.addEventListener('draggableChanged', (data: DDItem) => {
-        if ((<InputItem>data).isDraggable()) {
-          cell.removeClass('ccInputUndraggable')
-            .addClass('ccInputDraggable')
-            .draggable({
-              cursor: 'move',
-              revert: 'invalid',
-              helper: () => {
-                return $('<li>' + coords2string(data.getCoords()) + '</li>').addClass('ccListItem').data("DDItem", data);
-              }
-            });
-        } else {
-          cell.removeClass('ccInputDraggable')
-            .addClass('ccInputUndraggable')
-            .draggable('destroy');
+        if (style.underline) {
+          cell.css('text-decoration', 'underline');
         }
-      });
+        if (style.italic) {
+          cell.css('font-style', 'italic');
+        }
+        cell.css('font-family', style['font-face']);
+        cell.css('font-size', '' + style['font-size'] + 'pt')
+      } else {
+        cell.on('click', (ev) => {
+          if (data.isValueErroneous()) {
+            // Input item is erroneous and the user clicked on it.
+            // Transition to a state where it is not erroneous.
+            this.question.changeStatus(SpreadsheetStatus.ALL_BUT_ONE_ERROR, <InputItem> data);
+          } else if (this.question.getStatus() === SpreadsheetStatus.ALL_BUT_ONE_ERROR) {
+            // Input item is not erroneous, it is the only item not erroneous,
+            // and the user clicked on it. Transition to a state where it is
+            // erroneous.
+            this.question.changeStatus(SpreadsheetStatus.ALL_ERRORS);
+          }
+          // Ignore clicks when all errors are off.
+        });
 
-      // Bootstrap.
-      data.fireEvent('draggableChanged', data);
+        data.addEventListener('draggableChanged', (data: DDItem) => {
+          if (input.isDraggable()) {
+            cell.removeClass('ccInputUndraggable')
+              .addClass('ccInputDraggable')
+              .draggable({
+                cursor: 'move',
+                revert: 'invalid',
+                helper: () => {
+                  return $('<li>' + coords2string(data.getCoords()) + '</li>').addClass('ccListItem').data("DDItem", data);
+                }
+              });
+          } else {
+            cell.removeClass('ccInputDraggable')
+              .addClass('ccInputUndraggable')
+              .draggable('destroy');
+          }
+        });
+
+        // Bootstrap.
+        data.fireEvent('draggableChanged', data);
+      }
+    } else {
+      var output: OutputItem = <OutputItem> data;
+      // title === alt text for non-images.
+      cell.attr('title', output.getFormula());
     }
 
     // Change events can be triggered by the global spreadsheet, *or* by the
@@ -873,16 +913,8 @@ class CheckCellQuestion {
       .text('Validate')
       .on('click', (ev): void => {
         try {
-          var ranking = this.getRanking(), i, jsonRanking = { unimportant: [], ranking: [] };
-          // convert 2 text
-          for (i = 0; i < ranking.unimportant.length; i++) {
-            jsonRanking.unimportant.push(coords2string(ranking.unimportant[i].getCoords()));
-          }
-          for (i = 0; i < ranking.ranking.length; i++) {
-            jsonRanking.ranking.push(coords2string(ranking.ranking[i].getCoords()));
-          }
-
-          alert("Validates: " + JSON.stringify(jsonRanking));
+          var ranking = this.getRanking();
+          alert("Validates: " + JSON.stringify(ranking));
         } catch (e) {
           alert("Does not validate: " + e.toString());
         }
@@ -890,12 +922,12 @@ class CheckCellQuestion {
     this.parentDiv.append(validateBtn);
   }
 
-  public getRanking(): { unimportant: InputItem[]; ranking: InputItem[] } {
+  public getRanking(): { unimportant: SpreadsheetCoordinate[]; ranking: SpreadsheetCoordinate[] } {
     var inputs: InputItem[] = this.graph.getInputs(), i: number, item: InputItem,
-      rv = {
-        unimportant: [],
-        ranking: []
-      },
+      rv: {
+        unimportant: SpreadsheetCoordinate[];
+        ranking: SpreadsheetCoordinate[];
+      } = { unimportant: [], ranking: [] },
       coords2item: { [coords: string]: InputItem } = {}, coords: string;
 
     // Hash from coords => item
@@ -910,7 +942,7 @@ class CheckCellQuestion {
       item = coords2item[coords];
       delete coords2item[coords];
       assert(typeof item !== 'undefined');
-      rv.unimportant.push(item);
+      rv.unimportant.push(item.getCoords());
     }
 
     // Find each item in the rank list in the hash.
@@ -920,7 +952,7 @@ class CheckCellQuestion {
       item = coords2item[coords];
       delete coords2item[coords];
       assert(typeof item !== 'undefined');
-      rv.ranking.push(item);
+      rv.ranking.push(item.getCoords());
     }
 
     // Throw an error if the hash is not empty.
