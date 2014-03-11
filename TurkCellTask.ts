@@ -867,13 +867,18 @@ class CheckCellQuestion {
           revert: 'false',
           connectWith: '.' + sharedListClass,
           placeholder: 'ccPlaceholder'
+        })
+        .droppable({
+          tolerance: 'pointer',
+          accept: () => { return true; },
+          drop: dropHandler
         }),
       dropHandler = function (e, ui) {
         // Only append if this is a child element of the question div.
         if ($(ui.draggable).closest('#' + self.questionDiv.attr('id')).length > 0) {
           var item: InputItem = ui.helper.data('DDItem'),
             helper: JQuery = ui.helper;
-          $($(this).find('ul')[0]).append($('<li>').text(helper.text()).addClass('ccListItem').data('DDItem', item));
+          $(this).append($('<li>').text(helper.text()).addClass('ccListItem').data('DDItem', item));
           // Wait one turn for jQuery UI to do it's thing before we disable
           // dragging.
           setTimeout(() => { item.setDraggable(false); }, 0);
@@ -882,22 +887,12 @@ class CheckCellQuestion {
     this.rankListDiv = $('<div>')
       .addClass('ccRankList')
       .append($('<h4>Ranked List</h4>'))
-      .append(ul)
-      .droppable({
-        tolerance: 'pointer',
-        accept: () => { return true; },
-        drop: dropHandler
-      });
+      .append(ul);
     this.parentDiv.append(this.rankListDiv);
 
     // Unimportant table.
     this.unimportantListDiv = $('<div>')
       .addClass('ccUnimportantList')
-      .droppable({
-        tolerance: 'pointer',
-        accept: () => { return true; },
-        drop: dropHandler
-      })
       .append($('<h4>Unimportant Inputs</h4>'))
       .append($('<ul>')
         .addClass(sharedListClass)
@@ -905,6 +900,11 @@ class CheckCellQuestion {
           revert: 'false',
           connectWith: '.' + sharedListClass,
           placeholder: 'ccPlaceholder'
+        })
+        .droppable({
+          tolerance: 'pointer',
+          accept: () => { return true; },
+          drop: dropHandler
         })
       );
     this.parentDiv.append(this.unimportantListDiv);
