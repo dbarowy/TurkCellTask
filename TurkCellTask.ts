@@ -521,7 +521,6 @@ class WorksheetTable {
   private containsErrors: boolean = false;
   private tableDiv: JQuery;
   private errorCount: number = 0;
-  private tabAnchorElement: JQuery = null;
   private tabHighlighted: boolean = false;
 
   /**
@@ -532,9 +531,13 @@ class WorksheetTable {
    *   are equal heights.
    * @param question The CheckCellQuestion that this worksheet belongs to.
    */
-  constructor(private question: CheckCellQuestion, private name: string, private data: DDItem[][],
+  constructor(private question: CheckCellQuestion, private name: string, private tabAnchor: JQuery, private data: DDItem[][],
     private width: number, private height: number) {
-      this.tableDiv = $('<div>').addClass('tabbertab').attr('title', this.name).append(this.constructTable());
+      this.tableDiv = $('<div>')
+        .addClass('ccTab')
+        .attr('id', tabAnchor.attr('href').slice(1))
+        .attr('title', this.name)
+        .append(this.constructTable());
   }
 
   public getName(): string { return this.name; }
@@ -546,17 +549,13 @@ class WorksheetTable {
     return this.tableDiv;
   }
 
-  public setTabAnchorElement(anchor: JQuery) {
-    this.tabAnchorElement = anchor;
-  }
-
   public toggleHighlighting(enable: boolean) {
     if (enable !== this.tabHighlighted) {
       this.tabHighlighted = enable;
       if (enable) {
-        this.tabAnchorElement.text(this.name + '*').addClass('ccWsTabChange');
+        this.tabAnchor.text(this.name + '*').addClass('ccWsTabChange');
       } else {
-        this.tabAnchorElement.text(this.name).removeClass('ccWsTabChange');
+        this.tabAnchor.text(this.name).removeClass('ccWsTabChange');
       }
     }
   }
@@ -710,37 +709,52 @@ class CheckCellQuestion {
    */
   constructor(private data: QuestionInfo, private divId: string) {
     this.graph = new DataDependencyGraph(data);
-    this.questionDiv = $('<div>').addClass('tabber');
+    this.questionDiv = $('<div>').addClass('ccQuestionDiv');
 
     var graphData = this.graph.getData(), i: number, ws: string,
-      width: number = this.graph.getWidth(), height: number = this.graph.getHeight();
+      width: number = this.graph.getWidth(),
+      height: number = this.graph.getHeight(), tab: JQuery,
+      wsTable: WorksheetTable, tabList: JQuery = $('<ul>').addClass('ccTabList');
+
+    this.questionDiv.append(tabList);
     for (ws in graphData) {
       if (graphData.hasOwnProperty(ws)) {
-        var wsTable = new WorksheetTable(this, ws, graphData[ws], width, height);
+        // Create tab.
+        tab = $('<li>')
+          .append($('<a>')
+            .attr('href', '#ccTab' + nextId())
+            .text(ws)
+          );
+        tabList.append(tab);
+        // Create body.
+        // NOTE: WST wants the anchor, not the list element.
+        wsTable = new WorksheetTable(this, ws, $(tab.find('a')[0]), graphData[ws], width, height);
         this.tables[ws] = wsTable;
         this.questionDiv.append(wsTable.getDiv());
       }
     }
 
     this.parentDiv = $('#' + divId).append(this.questionDiv);
+    // Enable tabs.
+    this.questionDiv.tabs();
 
     // Ranking table.
     var i: number, inputCount: number = this.graph.getInputs().length,
       ul = $('<ul>')
-        .addClass('ccRankList')
         .droppable({
           tolerance: 'pointer',
           accept: () => { return true; },
           drop: (e, ui) => {
             // Only append if this is a child element of the question div.
             if ($(ui.draggable).closest('#' + this.getDivId()).length > 0) {
-              ul.append($('<li>').text(ui.helper.text()));
+              ul.append($('<li>').text(ui.helper.text()).addClass('ccListItem'));
             }
           }
         })
         .sortable({ revert: 'false' })
         .append('<li>lol</li>');
     this.rankListDiv = $('<div>')
+      .addClass('ccRankList')
       .append($('<h4>Ranked List</h4>'))
       .append(ul);
     this.parentDiv.append(this.rankListDiv);
@@ -793,16 +807,6 @@ class CheckCellQuestion {
       tab = tabDiv.find("a:contains('" + wsName + "*')");
       assert(tab.length === 1);
       return $(tab[0]);
-    }
-  }
-
-  public tabsLoaded() {
-    // Associate WS objects with their tabs.
-    var ws: string;
-    for (ws in this.tables) {
-      if (this.tables.hasOwnProperty(ws)) {
-        this.tables[ws].setTabAnchorElement(this.getWorksheetTab(ws));
-      }
     }
   }
 
@@ -859,13 +863,7 @@ class CheckCellQuestion {
   }
 }
 
-
-declare var tabberAutomatic: Function;
 window.onload = function () {
   var sampleTable = new CheckCellQuestion(sampleQuestion, 'sample');
-  tabberAutomatic();
-  sampleTable.tabsLoaded();
 };
 
-// Tabber options
-window['tabberOptions'] = { manualStartup: true };

@@ -70,3 +70,56 @@ a.ccWsTabChange {
     font-weight: bold;
 }
 
+ul.ccTabList
+{
+ margin:0;
+ padding: 3px 0;
+ font: bold 12px Arial, sans-serif;
+}
+
+ul.ccTabList li
+{
+ list-style: none;
+ margin: 0;
+ display: inline;
+}
+
+ul.ccTabList li a
+{
+ padding: 3px 0.5em;
+ margin-left: 3px;
+ border: 1px solid #778;
+ border-bottom: none;
+ background: #DDE;
+ text-decoration: none;
+}
+
+ul.ccTabList li a:link { color: #448; }
+ul.ccTabList li a:visited { color: #667; }
+
+ul.ccTabList li a:hover
+{
+ color: #000;
+ background: #AAE;
+ border-color: #227;
+}
+
+ul.ccTabList li.ui-tabs-active a
+{
+ color: #000;
+ background-color: #fff;
+ border-bottom: 1px solid #fff;
+}
+
+ul.ccTabList li.ui-tabs-active a:hover
+{
+ color: #000;
+ background: white;
+ border-bottom: 1px solid white;
+}
+
+.ccTab {
+    padding: 5px;
+    border: 1px solid #aaa;
+    display: inline-block;
+}
