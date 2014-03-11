@@ -602,7 +602,7 @@ class WorksheetTable {
               cursor: 'move',
               revert: 'invalid',
               helper: () => {
-                return $('<li>' + coords2string(data.getCoords()) + '</li>').data("DDItem", data);
+                return $('<li>' + coords2string(data.getCoords()) + '</li>').addClass('ccListItem').data("DDItem", data);
               }
             });
         } else {

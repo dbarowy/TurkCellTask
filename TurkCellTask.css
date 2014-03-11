@@ -103,6 +103,7 @@ ul.ccTabList li a:hover
  color: #000;
  background: #AAE;
  border-color: #227;
+ padding: 5px;
 }
 
 ul.ccTabList li.ui-tabs-active a
@@ -120,7 +121,6 @@ ul.ccTabList li.ui-tabs-active a:hover
 }
 
 .ccTab {
-    padding: 5px;
     border: 1px solid #aaa;
     display: inline-block;
 }
@@ -129,6 +129,18 @@ div.ccRankList {
     background-color: #c0c0c0;
 }
 
+div.ccRankList ul {
+    padding: 5px;
+}
+
 div.ccUnimportantList {
     background-color: #c0c0c0;
+}
+
+div.ccUnimportantList ul {
+    padding: 5px;
+}
+
+li.ccListItem {
+    list-style: none;
 }
