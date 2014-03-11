@@ -1,4 +1,5 @@
 /// <reference path="ref/jquery.d.ts" />
+/// <reference path="ref/jqueryui.d.ts" />
 /**
  * Client-side logic for laying out a web page for a CheckCell error-ranking
  * question. Consumes a JSON blob and spits out a question in the desired div.
@@ -139,6 +140,15 @@ function assert(test: boolean, errorMessage: string = "") {
   if (!test) {
     throw new Error('Assertion error: ' + errorMessage);
   }
+}
+
+var __id = 0;
+function nextId(): number {
+  return __id++;
+}
+
+function coords2string(coords: SpreadsheetCoordinate): string {
+  return coords.worksheet + " " + getExcelColumn(coords.y - 1) + (coords.x);
 }
 
 // #endregion Helper Functions
@@ -558,7 +568,7 @@ class WorksheetTable {
   private constructCell(data: DDItem): JQuery {
     var cell: JQuery = this.constructBlankCell();
     if (data.getType() === DDType.INPUT) {
-      cell.addClass('ccInput').attr('draggable', 'true');
+      cell.addClass('ccInput');
     } else {
       cell.addClass('ccOutput');
     }
@@ -577,6 +587,14 @@ class WorksheetTable {
           this.question.changeStatus(SpreadsheetStatus.ALL_ERRORS);
         }
         // Ignore clicks when all errors are off.
+      });
+
+      cell.draggable({
+        cursor: 'move',
+        revert: 'invalid',
+        helper: () => {
+          return $('<span>' + coords2string(data.getCoords()) + '</span>');
+        }
       });
     }
 
@@ -683,14 +701,14 @@ class CheckCellQuestion {
   private toggleButton: JQuery;
 
   // Used for drag n' drop events.
-  private rankTable: JQuery;
-  private unimportantTable: JQuery;
+  private rankListDiv: JQuery;
+  private unimportantListDiv: JQuery;
 
   /**
    * @param data The JSON object with the question information.
    * @param divId The ID of the div where the question should be injected.
    */
-  constructor(private data: QuestionInfo, divId: string) {
+  constructor(private data: QuestionInfo, private divId: string) {
     this.graph = new DataDependencyGraph(data);
     this.questionDiv = $('<div>').addClass('tabber');
 
@@ -707,36 +725,25 @@ class CheckCellQuestion {
     this.parentDiv = $('#' + divId).append(this.questionDiv);
 
     // Ranking table.
-    var i: number, inputCount: number = this.graph.getInputs().length;
-
-    this.rankTable = $('<table>')
-      .addClass('ccRankTable')
-      .append($('<tr>')
-        .addClass('ccRankTable')
-        .append($('<th>')
-          .attr('colSpan', '2')
-          .text('Ranked Inputs')
-          .addClass('ccRankTable')
-        )
-      );
-    for (i = 0; i < inputCount; i++) {
-      this.rankTable.append(
-        $('<tr>')
-          .addClass('ccRankTable')
-          .append($('<td>')
-            .addClass('ccRankTable')
-            .text("" + (i + 1))
-          )
-          .append($('<td>')
-            .addClass('ccRankTable')
-            .addClass('ccDroppableSlot')
-          )
-        );
-    }
-    this.parentDiv.append(this.rankTable);
+    var i: number, inputCount: number = this.graph.getInputs().length,
+      ul = $('<ul>')
+        .addClass('ccRankList')
+        .droppable({
+          tolerance: 'pointer',
+          accept: () => { return true; },
+          drop: (e, ui) => {
+            alert("IT HAPPENED");
+          }
+        })
+        .sortable({ revert: 'false' })
+        .append('<li>lol</li>');
+    this.rankListDiv = $('<div>')
+      .append($('<h4>Ranked List</h4>'))
+      .append(ul);
+    this.parentDiv.append(this.rankListDiv);
 
     // Unimportant table.
-    this.unimportantTable = $('<table>')
+    this.unimportantListDiv = $('<table>')
       .addClass('ccUnimportantTable')
       .append($('<tr>')
         .addClass('ccUnimportantTable')
@@ -746,7 +753,7 @@ class CheckCellQuestion {
         )
       );
     for (i = 0; i < inputCount; i++) {
-      this.unimportantTable.append($('<tr>')
+      this.unimportantListDiv.append($('<tr>')
         .addClass('ccUnimportantTable')
         .append($('<td>')
           .addClass('ccUnimportantTable')
@@ -754,7 +761,7 @@ class CheckCellQuestion {
         )
       );
     }
-    this.parentDiv.append(this.unimportantTable);
+    this.parentDiv.append(this.unimportantListDiv);
 
     // Button to toggle all errors.
     this.toggleButton = $('<button>')
@@ -770,6 +777,8 @@ class CheckCellQuestion {
       });
     this.parentDiv.append($('<br>')).append(this.toggleButton);
   }
+
+  public getDivId(): string { return this.divId; }
 
   private getWorksheetTab(wsName: string): JQuery {
     var tabDiv = this.parentDiv.find('.tabberlive'),
