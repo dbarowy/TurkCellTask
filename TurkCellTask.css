@@ -63,7 +63,7 @@ td.ccInputUndraggable {
 
 /* Output cells */
 td.ccOutput {
-    border: 2px solid black;
+    border: 2px solid black !important;
 }
 
 /* Erroneous output cells */
