@@ -818,6 +818,68 @@ class CheckCellQuestion {
         }
       });
     this.parentDiv.append($('<br>')).append(this.toggleButton);
+
+    // Validate button.
+    var validateBtn = $('<button>')
+      .text('Validate')
+      .on('click', (ev): void => {
+        try {
+          var ranking = this.getRanking(), i, jsonRanking = { unimportant: [], ranking: [] };
+          // convert 2 text
+          for (i = 0; i < ranking.unimportant.length; i++) {
+            jsonRanking.unimportant.push(coords2string(ranking.unimportant[i].getCoords()));
+          }
+          for (i = 0; i < ranking.ranking.length; i++) {
+            jsonRanking.ranking.push(coords2string(ranking.ranking[i].getCoords()));
+          }
+
+          alert("Validates: " + JSON.stringify(jsonRanking));
+        } catch (e) {
+          alert("Does not validate: " + e.toString());
+        }
+      });
+    this.parentDiv.append(validateBtn);
+  }
+
+  public getRanking(): { unimportant: InputItem[]; ranking: InputItem[] } {
+    var inputs: InputItem[] = this.graph.getInputs(), i: number, item: InputItem,
+      rv = {
+        unimportant: [],
+        ranking: []
+      },
+      coords2item: { [coords: string]: InputItem } = {}, coords: string;
+
+    // Hash from coords => item
+    for (i = 0; i < inputs.length; i++) {
+      coords2item[coords2string(inputs[i].getCoords())] = inputs[i];
+    }
+
+    // Find each item in the unimportant list in the hash.
+    var unimportantList = this.unimportantListDiv.find('ul').children();
+    for (i = 0; i < unimportantList.length; i++) {
+      coords = $(unimportantList[i]).text();
+      item = coords2item[coords];
+      delete coords2item[coords];
+      assert(typeof item !== 'undefined');
+      rv.unimportant.push(item);
+    }
+
+    // Find each item in the rank list in the hash.
+    var rankList = this.rankListDiv.find('ul').children();
+    for (i = 0; i < rankList.length; i++) {
+      coords = $(rankList[i]).text();
+      item = coords2item[coords];
+      delete coords2item[coords];
+      assert(typeof item !== 'undefined');
+      rv.ranking.push(item);
+    }
+
+    // Throw an error if the hash is not empty.
+    if (Object.keys(coords2item).length > 0) {
+      throw new Error('The following items have not been ranked: ' + JSON.stringify(Object.keys(coords2item)));
+    }
+
+    return rv;
   }
 
   public getDivId(): string { return this.divId; }
