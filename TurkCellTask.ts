@@ -62,103 +62,6 @@ interface QuestionInfo {
   outputs: OutputInfo[];
 }
 
-/**
- * Data for a sample question.
- */
-var sampleQuestion: QuestionInfo = {
-  "errors": [
-    {
-      "x": 1,
-      "y": 1,
-      "worksheet": "sheet1",
-      "orig": "12.343",
-      "err": "123.43",
-      "outputs": [
-        {
-          "x": 6,
-          "y": 7,
-          "worksheet": "sheet1",
-          "noerr": "62.11"
-        },
-        {
-          "x": 7,
-          "y": 7,
-          "worksheet": "sheet1",
-          "noerr": "99.0"
-        }
-      ],
-      "style": {
-        "bold": true,
-        "italic": false,
-        "underline": false,
-        "font-face": "Arial",
-        "font-size": 12
-      }
-    },
-    {
-      "x": 1,
-      "y": 2,
-      "worksheet": "fun",
-      "orig": "10.0",
-      "err": "1.0",
-      "outputs": [
-        {
-          "x": 6,
-          "y": 7,
-          "worksheet": "sheet1",
-          "noerr": "0.0"
-        },
-        {
-          "x": 7,
-          "y": 7,
-          "worksheet": "sheet1",
-          "noerr": "99.0"
-        }
-      ],
-      "style": {
-        "bold": false,
-        "italic": false,
-        "underline": false,
-        "font-face": "Wingdings",
-        "font-size": 11
-      }
-    },
-    {
-      "x": 1,
-      "y": 3,
-      "worksheet": "fun",
-      "orig": "10.0",
-      "err": "10.0",
-      "outputs": [],
-      "style": {
-        "bold": false,
-        "italic": false,
-        "underline": false,
-        "font-face": "Wingdings",
-        "font-size": 11
-      }
-    }
-  ],
-  "outputs": [
-    {
-      "x": 6,
-      "y": 7,
-      "worksheet": "sheet1",
-      "orig": "0.0",
-      "err": "100",
-      "formula": "=SUM(A1:A10)"
-    },
-    {
-      "x": 7,
-      "y": 7,
-      "worksheet": "sheet1",
-      "orig": "3.14159265359",
-      "err": "99.0",
-      "formula": "=AVERAGE(Z22:Z23)"
-    }
-  ]
-};
-
 // #endregion JSON Typings
 
 // #region Helper Functions
@@ -922,19 +825,6 @@ class CheckCellQuestion {
         }
       });
     this.parentDiv.append($('<br>')).append(this.toggleButton);
-
-    // Validate button.
-    var validateBtn = $('<button>')
-      .text('Validate')
-      .on('click', (ev): void => {
-        try {
-          var ranking = this.getRanking();
-          alert("Validates: " + JSON.stringify(ranking));
-        } catch (e) {
-          alert("Does not validate: " + e.toString());
-        }
-      });
-    this.parentDiv.append(validateBtn);
   }
 
   public addToChangeList(output: OutputItem): void {
@@ -1064,9 +954,4 @@ class CheckCellQuestion {
     return this.status;
   }
 }
-
-window.onload = function () {
-  var sampleTable = new CheckCellQuestion(sampleQuestion, 'sample');
-  // new CheckCellQuestion(sampleQuestion, 'sample2');
-};
 

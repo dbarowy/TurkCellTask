@@ -9,9 +9,119 @@
     <script type="text/javascript" src="//cdnjs.cloudflare.com/ajax/libs/jquery/1.11.0/jquery.min.js"></script>
     <script type="text/javascript" src="//cdnjs.cloudflare.com/ajax/libs/jqueryui/1.10.3/jquery-ui.min.js"></script>
     <script type="text/javascript" src="TurkCellTask.js"></script>
+    <script type="text/javascript">
+        /**
+         * Data for a sample question.
+         */
+        var sampleQuestion = {
+          "errors": [
+            {
+              "x": 1,
+              "y": 1,
+              "worksheet": "sheet1",
+              "orig": "12.343",
+              "err": "123.43",
+              "outputs": [
+                {
+                  "x": 6,
+                  "y": 7,
+                  "worksheet": "sheet1",
+                  "noerr": "62.11"
+                },
+                {
+                  "x": 7,
+                  "y": 7,
+                  "worksheet": "sheet1",
+                  "noerr": "99.0"
+                }
+              ],
+              "style": {
+                "bold": true,
+                "italic": false,
+                "underline": false,
+                "font-face": "Arial",
+                "font-size": 12
+              }
+            },
+            {
+              "x": 1,
+              "y": 2,
+              "worksheet": "fun",
+              "orig": "10.0",
+              "err": "1.0",
+              "outputs": [
+                {
+                  "x": 6,
+                  "y": 7,
+                  "worksheet": "sheet1",
+                  "noerr": "0.0"
+                },
+                {
+                  "x": 7,
+                  "y": 7,
+                  "worksheet": "sheet1",
+                  "noerr": "99.0"
+                }
+              ],
+              "style": {
+                "bold": false,
+                "italic": false,
+                "underline": false,
+                "font-face": "Wingdings",
+                "font-size": 11
+              }
+            },
+            {
+              "x": 1,
+              "y": 3,
+              "worksheet": "fun",
+              "orig": "10.0",
+              "err": "10.0",
+              "outputs": [],
+              "style": {
+                "bold": false,
+                "italic": false,
+                "underline": false,
+                "font-face": "Wingdings",
+                "font-size": 11
+              }
+            }
+          ],
+          "outputs": [
+            {
+              "x": 6,
+              "y": 7,
+              "worksheet": "sheet1",
+              "orig": "0.0",
+              "err": "100",
+              "formula": "=SUM(A1:A10)"
+            },
+            {
+              "x": 7,
+              "y": 7,
+              "worksheet": "sheet1",
+              "orig": "3.14159265359",
+              "err": "99.0",
+              "formula": "=AVERAGE(Z22:Z23)"
+            }
+          ]
+        };
+
+        var sampleQuestion;
+        window.onload = function () {
+          sampleQuestion = new CheckCellQuestion(sampleQuestion, 'sample');
+          $('button').on('click', function(ev) {
+            try {
+                alert("Output JSON: " + JSON.stringify(sampleQuestion.getRanking()));
+            } catch (e) {
+                alert("Invalid ranking or w/e.");
+            }
+          });
+        };
+    </script>
 </head>
 <body>
     <div id="sample"></div>
-    <div id="sample2"></div>
+    <button>Submit</button>
 </body>
 </html>
