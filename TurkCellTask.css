@@ -132,21 +132,41 @@ ul.ccTabList li.ui-tabs-active a:hover
 }
 
 div.ccRankList {
-    background-color: #c0c0c0;
+    display: inline-block;
+    margin: 5px;
+}
+
+div.ccRankList h4 {
+    text-align: center;
 }
 
 div.ccRankList ul {
     padding: 5px;
+    background-color: #c0c0c0;
 }
 
 div.ccUnimportantList {
-    background-color: #c0c0c0;
+    display: inline-block;
+    margin: 5px;
+}
+
+div.ccUnimportandList h4 {
+    text-align: center;
 }
 
 div.ccUnimportantList ul {
     padding: 5px;
+    background-color: #c0c0c0;
 }
 
 li.ccListItem {
+    list-style: none;
+    cursor: move;
+}
+
+.ccPlaceholder {
+    border: 1px solid #fcefa1;
+    background: #fbf9ee url(images/ui-bg_glass_55_fbf9ee_1x400.png) 50% 50% repeat-x;
+    color: #363636;
     list-style: none;
 }

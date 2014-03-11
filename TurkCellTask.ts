@@ -865,7 +865,8 @@ class CheckCellQuestion {
         .addClass(sharedListClass)
         .sortable({
           revert: 'false',
-          connectWith: '.' + sharedListClass
+          connectWith: '.' + sharedListClass,
+          placeholder: 'ccPlaceholder'
         }),
       dropHandler = function (e, ui) {
         // Only append if this is a child element of the question div.
@@ -902,7 +903,8 @@ class CheckCellQuestion {
         .addClass(sharedListClass)
         .sortable({
           revert: 'false',
-          connectWith: '.' + sharedListClass
+          connectWith: '.' + sharedListClass,
+          placeholder: 'ccPlaceholder'
         })
       );
     this.parentDiv.append(this.unimportantListDiv);
