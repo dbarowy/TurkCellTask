@@ -52,6 +52,7 @@ td.ccInputDraggable {
 /* Input cells, once they can no longer be dragged. */
 td.ccInputUndraggable {
     color: #808080;
+    border-color: #808080;
 }
 
 /* Output cells */
@@ -122,4 +123,12 @@ ul.ccTabList li.ui-tabs-active a:hover
     padding: 5px;
     border: 1px solid #aaa;
     display: inline-block;
+}
+
+div.ccRankList {
+    background-color: #c0c0c0;
+}
+
+div.ccUnimportantList {
+    background-color: #c0c0c0;
 }

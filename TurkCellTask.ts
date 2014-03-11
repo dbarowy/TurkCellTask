@@ -304,14 +304,14 @@ class InputItem extends ChangeObservable<InputItem> implements DDItem {
   }[] = [];
   private shouldDisplayError: boolean = true;
   private coords: SpreadsheetCoordinate;
-  private rank: number = -1;
+  private draggable: boolean = true;
 
   /**
    * Constructs an InputInfo object. Uses the data dependency graph to update
    * *outputs* with data dependencies.
    */
   constructor(graph: DataDependencyGraph, data: InputInfo) {
-    super(['changed']);
+    super(['changed', 'draggableChanged']);
     var i: number, item: OutputItem;
     this.orig = data.orig;
     this.err = data.err;
@@ -331,6 +331,17 @@ class InputItem extends ChangeObservable<InputItem> implements DDItem {
     }
   }
 
+  public setDraggable(draggable: boolean) {
+    if (draggable !== this.draggable) {
+      this.draggable = draggable;
+      this.fireEvent('draggableChanged', this);
+    }
+  }
+
+  public isDraggable(): boolean {
+    return this.draggable;
+  }
+
   public getType(): DDType { return DDType.INPUT; }
   public getValue(): string { return this.shouldDisplayError ? this.err : this.orig; }
   private valueChanged(): void {
@@ -340,12 +351,6 @@ class InputItem extends ChangeObservable<InputItem> implements DDItem {
   public isValueErroneous(): boolean {
     return this.shouldDisplayError;
   }
-
-  public setRank(rank: number) {
-    this.rank = rank;
-  }
-
-  public getRank(): number { return this.rank; }
 
   /**
    * Changes the value of this input item.
@@ -574,6 +579,7 @@ class WorksheetTable {
 
     // Only listen for clicks and drags on input cells.
     if (data.getType() === DDType.INPUT) {
+
       cell.on('click', (ev) => {
         if (data.isValueErroneous()) {
           // Input item is erroneous and the user clicked on it.
@@ -588,13 +594,26 @@ class WorksheetTable {
         // Ignore clicks when all errors are off.
       });
 
-      cell.draggable({
-        cursor: 'move',
-        revert: 'invalid',
-        helper: () => {
-          return $('<li>' + coords2string(data.getCoords()) + '</li>');
+      data.addEventListener('draggableChanged', (data: DDItem) => {
+        if ((<InputItem>data).isDraggable()) {
+          cell.removeClass('ccInputUndraggable')
+            .addClass('ccInputDraggable')
+            .draggable({
+              cursor: 'move',
+              revert: 'invalid',
+              helper: () => {
+                return $('<li>' + coords2string(data.getCoords()) + '</li>').data("DDItem", data);
+              }
+            });
+        } else {
+          cell.removeClass('ccInputDraggable')
+            .addClass('ccInputUndraggable')
+            .draggable('destroy');
         }
       });
+
+      // Bootstrap.
+      data.fireEvent('draggableChanged', data);
     }
 
     // Change events can be triggered by the global spreadsheet, *or* by the
@@ -739,45 +758,51 @@ class CheckCellQuestion {
     this.questionDiv.tabs();
 
     // Ranking table.
-    var i: number, inputCount: number = this.graph.getInputs().length,
+    var sharedListClass = 'dragList' + nextId(),
       ul = $('<ul>')
-        .droppable({
-          tolerance: 'pointer',
-          accept: () => { return true; },
-          drop: (e, ui) => {
-            // Only append if this is a child element of the question div.
-            if ($(ui.draggable).closest('#' + this.getDivId()).length > 0) {
-              ul.append($('<li>').text(ui.helper.text()).addClass('ccListItem'));
-            }
-          }
-        })
-        .sortable({ revert: 'false' })
-        .append('<li>lol</li>');
+        .addClass(sharedListClass)
+        .sortable({
+          revert: 'false',
+          connectWith: '.' + sharedListClass
+        }),
+      dropHandler = function (e, ui) {
+        // Only append if this is a child element of the question div.
+        if ($(ui.draggable).closest('.ccMain').length > 0) {
+          var item: InputItem = ui.helper.data('DDItem'),
+            helper: JQuery = ui.helper;
+          $($(this).find('ul')[0]).append($('<li>').text(helper.text()).addClass('ccListItem'));
+          // Wait one turn for jQuery UI to do it's thing before we disable
+          // dragging.
+          setTimeout(() => { item.setDraggable(false); }, 0);
+        }
+      };
     this.rankListDiv = $('<div>')
       .addClass('ccRankList')
       .append($('<h4>Ranked List</h4>'))
-      .append(ul);
+      .append(ul)
+      .droppable({
+        tolerance: 'pointer',
+        accept: () => { return true; },
+        drop: dropHandler
+      });
     this.parentDiv.append(this.rankListDiv);
 
     // Unimportant table.
-    this.unimportantListDiv = $('<table>')
-      .addClass('ccUnimportantTable')
-      .append($('<tr>')
-        .addClass('ccUnimportantTable')
-        .append($('<th>')
-          .addClass('ccUnimportantTable')
-          .text('Unimportant Inputs')
-        )
+    this.unimportantListDiv = $('<div>')
+      .addClass('ccUnimportantList')
+      .droppable({
+        tolerance: 'pointer',
+        accept: () => { return true; },
+        drop: dropHandler
+      })
+      .append($('<h4>Unimportant Inputs</h4>'))
+      .append($('<ul>')
+        .addClass(sharedListClass)
+        .sortable({
+          revert: 'false',
+          connectWith: '.' + sharedListClass
+        })
       );
-    for (i = 0; i < inputCount; i++) {
-      this.unimportantListDiv.append($('<tr>')
-        .addClass('ccUnimportantTable')
-        .append($('<td>')
-          .addClass('ccUnimportantTable')
-          .addClass('ccDroppableSlot')
-        )
-      );
-    }
     this.parentDiv.append(this.unimportantListDiv);
 
     // Button to toggle all errors.
