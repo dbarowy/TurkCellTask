@@ -631,7 +631,7 @@ class WorksheetTable {
   }
 
   private constructBlankCell(): JQuery {
-    return $('<td>').addClass('ccMain');
+    return $('<td>');
   }
 
   private constructCell(data: DDItem): JQuery {
@@ -761,14 +761,12 @@ class WorksheetTable {
     table = $('<table>').addClass('ccMain');
     // Construct header.
     tr.append($('<th>')
-      .addClass('ccMain')
       .addClass('ccHeader')
       .addClass('ccRowHeaderHeader')
     );
     // XXX: Excel is 1-indexed.
     for (i = 1; i < this.width; i++) {
       tr.append($('<th>')
-        .addClass('ccMain')
         .addClass('ccHeader')
         .text(getExcelColumn(i - 1))
       );

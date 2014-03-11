@@ -5,16 +5,23 @@ table.ccMain {
 }
 
 /* Normal / empty cells */
-td.ccMain {
+table.ccMain td, table.ccMain th {
     text-align: right;
     border: 1px solid #c0c0c0;
+    -webkit-touch-callout: none;
+    -webkit-user-select: none;
+    -khtml-user-select: none;
+    -moz-user-select: none;
+    -ms-user-select: none;
+    user-select: none;
+    cursor:default;
 }
 
 /* Column AND row headers. */
 th.ccHeader, td.ccHeader {
-    text-align: center;
-    border: 1px solid  #7e7d68;
-    background: #e5e4e8;
+    text-align: center !important;
+    border: 1px solid  #7e7d68 !important;
+    background: #e5e4e8 !important;
 }
 
 /* Column headers: A B C D E F ... */
@@ -45,7 +52,7 @@ td.ccInputError {
 
 /* Draggable input cells */
 td.ccInputDraggable {
-    cursor: move;
+    cursor: move !important;
 }
 
 /* Input cells, once they can no longer be dragged. */
