@@ -1,3 +1,4 @@
+/// <reference path="ref/jquery.d.ts" />
 /**
  * Client-side logic for laying out a web page for a CheckCell error-ranking
  * question. Consumes a JSON blob and spits out a question in the desired div.
@@ -215,7 +216,6 @@ class OutputItem extends ChangeObservable<OutputItem> implements DDItem {
 
   constructor(data: OutputInfo) {
     super(['changed']);
-    // Coordinate information is represented in the graph.
     this.orig = data.orig;
     this.err = data.err;
     this.coords = data;
@@ -509,9 +509,9 @@ class DataDependencyGraph {
  */
 class WorksheetTable {
   private containsErrors: boolean = false;
-  private tableDiv: HTMLDivElement = document.createElement('div');
+  private tableDiv: JQuery;
   private errorCount: number = 0;
-  private tabAnchorElement: HTMLAnchorElement = null;
+  private tabAnchorElement: JQuery = null;
   private tabHighlighted: boolean = false;
 
   /**
@@ -524,10 +524,7 @@ class WorksheetTable {
    */
   constructor(private question: CheckCellQuestion, private name: string, private data: DDItem[][],
     private width: number, private height: number) {
-      this.tableDiv = document.createElement('div');
-      this.tableDiv.appendChild(this.constructTable());
-      this.tableDiv.classList.add('tabbertab');
-      this.tableDiv.setAttribute('title', this.name);
+      this.tableDiv = $('<div>').addClass('tabbertab').attr('title', this.name).append(this.constructTable());
   }
 
   public getName(): string { return this.name; }
@@ -535,11 +532,11 @@ class WorksheetTable {
     return this.errorCount > 0;
   }
 
-  public getDiv(): HTMLDivElement {
+  public getDiv(): JQuery {
     return this.tableDiv;
   }
 
-  public setTabAnchorElement(anchor: HTMLAnchorElement) {
+  public setTabAnchorElement(anchor: JQuery) {
     this.tabAnchorElement = anchor;
   }
 
@@ -547,33 +544,28 @@ class WorksheetTable {
     if (enable !== this.tabHighlighted) {
       this.tabHighlighted = enable;
       if (enable) {
-        this.tabAnchorElement.innerText = this.name + '*';
-        this.tabAnchorElement.classList.add('ccWsTabChange');
+        this.tabAnchorElement.text(this.name + '*').addClass('ccWsTabChange');
       } else {
-        this.tabAnchorElement.innerText = this.name;
-        this.tabAnchorElement.classList.remove('ccWsTabChange');
+        this.tabAnchorElement.text(this.name).removeClass('ccWsTabChange');
       }
     }
   }
 
-  private constructBlankCell(): HTMLTableCellElement {
-    var td = document.createElement('td');
-    td.classList.add('ccMain');
-    return td;
+  private constructBlankCell(): JQuery {
+    return $('<td>').addClass('ccMain');
   }
 
-  private constructCell(data: DDItem): HTMLTableCellElement {
-    var cell: HTMLTableCellElement = this.constructBlankCell();
+  private constructCell(data: DDItem): JQuery {
+    var cell: JQuery = this.constructBlankCell();
     if (data.getType() === DDType.INPUT) {
-      cell.classList.add('ccInput');
-      cell.setAttribute('draggable', 'true');
+      cell.addClass('ccInput').attr('draggable', 'true');
     } else {
-      cell.classList.add('ccOutput');
+      cell.addClass('ccOutput');
     }
 
     // Only listen for clicks and drags on input cells.
     if (data.getType() === DDType.INPUT) {
-      cell.addEventListener('click', (ev) => {
+      cell.on('click', (ev) => {
         if (data.isValueErroneous()) {
           // Input item is erroneous and the user clicked on it.
           // Transition to a state where it is not erroneous.
@@ -593,13 +585,13 @@ class WorksheetTable {
     var errorStyle: string = data.getType() === DDType.INPUT ? 'ccInputError' : 'ccOutputError';
     data.addEventListener('changed', (data: DDItem) => {
       // Update displayed value.
-      cell.innerText = data.getValue();
+      cell.text(data.getValue());
       if (data.isValueErroneous()) {
         // Add the 'erroneous' style.
-        cell.classList.add(errorStyle);
+        cell.addClass(errorStyle);
       } else {
         // Remove the 'erroneous' style.
-        cell.classList.remove(errorStyle);
+        cell.removeClass(errorStyle);
       }
 
       // Highlight our tab if this element is part of a single disabled
@@ -614,21 +606,17 @@ class WorksheetTable {
   /**
    * Constructs a data row of the table.
    */
-  private constructRow(row: DDItem[], rowId: number): HTMLTableRowElement {
-    var tr: HTMLTableRowElement = document.createElement('tr'),
-      td: HTMLTableCellElement, i: number, item: DDItem;
+  private constructRow(row: DDItem[], rowId: number): JQuery {
+    var tr: JQuery = $('<tr>'), i: number, item: DDItem;
 
-    td = this.constructBlankCell();
-    td.innerText = "" + (rowId - 1);
-    td.classList.add('ccHeader');
-    tr.appendChild(td);
+    tr.append(this.constructBlankCell().text("" + (rowId - 1)).addClass('ccHeader'));
     // XXX: Excel is 1-indexed. Ignore the 0th cell.
     for (i = 1; i < this.width; i++) {
       item = row[i];
       if (typeof item === 'undefined') {
-        tr.appendChild(this.constructBlankCell());
+        tr.append(this.constructBlankCell());
       } else {
-        tr.appendChild(this.constructCell(item));
+        tr.append(this.constructCell(item));
       }
     }
     return tr;
@@ -637,34 +625,32 @@ class WorksheetTable {
   /**
    * Constructs the <table> and its header.
    */
-  private constructTable(): HTMLTableElement {
-    var table: HTMLTableElement = document.createElement('table'),
-      i: number, tr: HTMLTableRowElement = document.createElement('tr'),
-      th: HTMLTableHeaderCellElement;
+  private constructTable(): JQuery {
+    var table: JQuery,
+      i: number, tr: JQuery = $('<tr>');
 
-    table.classList.add('ccMain');
-
+    table = $('<table>').addClass('ccMain');
     // Construct header.
-    th = document.createElement('th');
-    th.classList.add('ccMain');
-    th.classList.add('ccHeader');
-    th.classList.add('ccRowHeaderHeader');
-    tr.appendChild(th);
+    tr.append($('<th>')
+      .addClass('ccMain')
+      .addClass('ccHeader')
+      .addClass('ccRowHeaderHeader')
+    );
     // XXX: Excel is 1-indexed.
     for (i = 1; i < this.width; i++) {
-      th = document.createElement('th');
-      th.classList.add('ccMain');
-      th.classList.add('ccHeader');
-      th.innerText = getExcelColumn(i-1);
-      tr.appendChild(th);
+      tr.append($('<th>')
+        .addClass('ccMain')
+        .addClass('ccHeader')
+        .text(getExcelColumn(i - 1))
+      );
     }
-    table.appendChild(tr);
+    table.append(tr);
     // XXX: Excel is 1-indexed.
     for (i = 1; i < this.height; i++) {
       if (i < this.data.length) {
-        table.appendChild(this.constructRow(this.data[i], i+1));
+        table.append(this.constructRow(this.data[i], i+1));
       } else {
-        table.appendChild(this.constructRow([], i+1));
+        table.append(this.constructRow([], i+1));
       }
     }
     return table;
@@ -689,16 +675,16 @@ enum SpreadsheetStatus {
  */
 class CheckCellQuestion {
   private graph: DataDependencyGraph;
-  private parentDiv: HTMLDivElement;
-  private divElement: HTMLDivElement;
+  private parentDiv: JQuery;
+  private questionDiv: JQuery;
   private status: SpreadsheetStatus = SpreadsheetStatus.ALL_ERRORS;
   private tables: { [ws: string]: WorksheetTable } = {};
   private disabledError: InputItem = null;
-  private toggleButton: HTMLButtonElement;
+  private toggleButton: JQuery;
 
   // Used for drag n' drop events.
-  private rankTable: HTMLTableElement = document.createElement('table');
-  private unimportantTable: HTMLTableElement = document.createElement('table');
+  private rankTable: JQuery;
+  private unimportantTable: JQuery;
 
   /**
    * @param data The JSON object with the question information.
@@ -706,8 +692,7 @@ class CheckCellQuestion {
    */
   constructor(private data: QuestionInfo, divId: string) {
     this.graph = new DataDependencyGraph(data);
-    this.divElement = document.createElement('div');
-    this.divElement.classList.add('tabber');
+    this.questionDiv = $('<div>').addClass('tabber');
 
     var graphData = this.graph.getData(), i: number, ws: string,
       width: number = this.graph.getWidth(), height: number = this.graph.getHeight();
@@ -715,94 +700,88 @@ class CheckCellQuestion {
       if (graphData.hasOwnProperty(ws)) {
         var wsTable = new WorksheetTable(this, ws, graphData[ws], width, height);
         this.tables[ws] = wsTable;
-        this.divElement.appendChild(wsTable.getDiv());
+        this.questionDiv.append(wsTable.getDiv());
       }
     }
 
-    this.parentDiv = <HTMLDivElement> document.getElementById(divId);
-    this.parentDiv.appendChild(this.divElement);
+    this.parentDiv = $('#' + divId).append(this.questionDiv);
 
     // Ranking table.
-    var i: number,
-      inputCount: number = this.graph.getInputs().length,
-      tr = document.createElement('tr'), th: HTMLTableHeaderCellElement,
-      td: HTMLTableCellElement;
+    var i: number, inputCount: number = this.graph.getInputs().length;
 
-    this.rankTable.classList.add('ccRankTable');
-    th = document.createElement('th');
-    th.colSpan = 2;
-    th.innerText = "Ranked Inputs";
-    th.classList.add('ccRankTable');
-    tr.appendChild(th);
-    tr.classList.add('ccRankTable');
-    this.rankTable.appendChild(tr);
+    this.rankTable = $('<table>')
+      .addClass('ccRankTable')
+      .append($('<tr>')
+        .addClass('ccRankTable')
+        .append($('<th>')
+          .attr('colSpan', '2')
+          .text('Ranked Inputs')
+          .addClass('ccRankTable')
+        )
+      );
     for (i = 0; i < inputCount; i++) {
-      tr = document.createElement('tr');
-      tr.classList.add('ccRankTable');
-      td = document.createElement('td');
-      td.classList.add('ccRankTable');
-      td.innerText = "" + (i + 1);
-      tr.appendChild(td);
-      td = document.createElement('td');
-      td.classList.add('ccRankTable');
-      td.classList.add('ccDroppableSlot');
-      // XXX: Add drop shenanigans here.
-      tr.appendChild(td);
-      this.rankTable.appendChild(tr);
+      this.rankTable.append(
+        $('<tr>')
+          .addClass('ccRankTable')
+          .append($('<td>')
+            .addClass('ccRankTable')
+            .text("" + (i + 1))
+          )
+          .append($('<td>')
+            .addClass('ccRankTable')
+            .addClass('ccDroppableSlot')
+          )
+        );
     }
-    this.parentDiv.appendChild(this.rankTable);
+    this.parentDiv.append(this.rankTable);
 
     // Unimportant table.
-    this.unimportantTable.classList.add('ccUnimportantTable');
-    tr = document.createElement('tr');
-    th = document.createElement('th');
-    th.innerText = "Unimportant Inputs";
-    th.classList.add('ccUnimportantTable');
-    tr.appendChild(th);
-    tr.classList.add('ccUnimportantTable');
-    this.unimportantTable.appendChild(tr);
+    this.unimportantTable = $('<table>')
+      .addClass('ccUnimportantTable')
+      .append($('<tr>')
+        .addClass('ccUnimportantTable')
+        .append($('<th>')
+          .addClass('ccUnimportantTable')
+          .text('Unimportant Inputs')
+        )
+      );
     for (i = 0; i < inputCount; i++) {
-      tr = document.createElement('tr');
-      tr.classList.add('ccUnimportantTable');
-      td = document.createElement('td');
-      // XXX: Add drop shenanigans here.
-      td.classList.add('ccUnimportantTable');
-      td.classList.add('ccDroppableSlot');
-      tr.appendChild(td);
-      this.unimportantTable.appendChild(tr);
+      this.unimportantTable.append($('<tr>')
+        .addClass('ccUnimportantTable')
+        .append($('<td>')
+          .addClass('ccUnimportantTable')
+          .addClass('ccDroppableSlot')
+        )
+      );
     }
-    this.parentDiv.appendChild(this.unimportantTable);
+    this.parentDiv.append(this.unimportantTable);
 
     // Button to toggle all errors.
-    this.toggleButton = document.createElement('button');
-    this.toggleButton.innerText = "Toggle errors off";
-    this.toggleButton.addEventListener('click', (ev): void => {
-      if (this.toggleButton.innerText === 'Toggle errors off') {
-        this.changeStatus(SpreadsheetStatus.NO_ERRORS);
-        this.toggleButton.innerText = "Toggle errors on";
-      } else {
-        this.changeStatus(SpreadsheetStatus.ALL_ERRORS);
-        this.toggleButton.innerText = "Toggle errors off";
-      }
-    });
-    this.parentDiv.appendChild(document.createElement('br'));
-    this.parentDiv.appendChild(this.toggleButton);
+    this.toggleButton = $('<button>')
+      .text("Toggle errors off")
+      .on('click', (ev): void => {
+        if (this.toggleButton.text() === 'Toggle errors off') {
+          this.changeStatus(SpreadsheetStatus.NO_ERRORS);
+          this.toggleButton.text("Toggle errors on");
+        } else {
+          this.changeStatus(SpreadsheetStatus.ALL_ERRORS);
+          this.toggleButton.text("Toggle errors off");
+        }
+      });
+    this.parentDiv.append($('<br>')).append(this.toggleButton);
   }
 
-  private getWorksheetTab(wsName: string): HTMLAnchorElement {
-    // Get the tab listing.
-    var tabDiv = this.parentDiv.getElementsByClassName('tabberlive');
-    assert(tabDiv.length === 1);
-    var tabList: HTMLUListElement = <HTMLUListElement> tabDiv[0].childNodes[0],
-      children = tabList.children, i: number;
-    for (i = 0; i < children.length; i++) {
-      var child: HTMLUListElement = <HTMLUListElement> children[i],
-        tabAnchor: HTMLAnchorElement = <HTMLAnchorElement> child.children[0];
-      if (tabAnchor.innerText === wsName || tabAnchor.innerText === (wsName + "*")) {
-        return tabAnchor;
-      }
+  private getWorksheetTab(wsName: string): JQuery {
+    var tabDiv = this.parentDiv.find('.tabberlive'),
+      tab = tabDiv.find("a:contains('" + wsName + "')");
+    if (tab.length > 0) {
+      assert(tab.length === 1);
+      return $(tab[0]);
+    } else {
+      tab = tabDiv.find("a:contains('" + wsName + "*')");
+      assert(tab.length === 1);
+      return $(tab[0]);
     }
-    assert(false, "Couldn't find worksheet tab " + wsName);
   }
 
   public tabsLoaded() {
