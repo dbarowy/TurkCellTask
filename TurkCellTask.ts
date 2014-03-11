@@ -428,6 +428,10 @@ class InputItem extends ChangeObservable<InputItem> implements DDItem {
   public getStyle(): CellStyle {
     return this.data.style;
   }
+
+  public getErrorValue(): string {
+    return this.data.err;
+  }
 }
 
 /**
@@ -678,7 +682,7 @@ class WorksheetTable {
                 cursor: 'move',
                 revert: 'invalid',
                 helper: () => {
-                  return $('<li>' + coords2string(data.getCoords()) + '</li>').addClass('ccListItem').data("DDItem", data);
+                  return $('<li>' + coords2string(data.getCoords()) + ': ' + input.getErrorValue() + '</li>').addClass('ccListItem').data("DDItem", data);
                 }
               });
           } else {
@@ -817,7 +821,7 @@ class CheckCellQuestion {
    */
   constructor(private data: QuestionInfo, private divId: string) {
     this.graph = new DataDependencyGraph(data);
-    this.questionDiv = $('<div>').addClass('ccQuestionDiv');
+    this.questionDiv = $('<div>').addClass('ccQuestionDiv').attr('id', 'ccQuestion' + nextId());
 
     var graphData = this.graph.getData(), i: number, ws: string,
       width: number = this.graph.getWidth(),
@@ -856,10 +860,10 @@ class CheckCellQuestion {
         }),
       dropHandler = function (e, ui) {
         // Only append if this is a child element of the question div.
-        if ($(ui.draggable).closest('#' + self.divId).length > 0) {
+        if ($(ui.draggable).closest('#' + self.questionDiv.attr('id')).length > 0) {
           var item: InputItem = ui.helper.data('DDItem'),
             helper: JQuery = ui.helper;
-          $($(this).find('ul')[0]).append($('<li>').text(helper.text()).addClass('ccListItem'));
+          $($(this).find('ul')[0]).append($('<li>').text(helper.text()).addClass('ccListItem').data('DDItem', item));
           // Wait one turn for jQuery UI to do it's thing before we disable
           // dragging.
           setTimeout(() => { item.setDraggable(false); }, 0);
@@ -938,7 +942,8 @@ class CheckCellQuestion {
     // Find each item in the unimportant list in the hash.
     var unimportantList = this.unimportantListDiv.find('ul').children();
     for (i = 0; i < unimportantList.length; i++) {
-      coords = $(unimportantList[i]).text();
+      // XXX: Hack cuz list values are "coords: value".
+      coords = $(unimportantList[i]).text().split(':')[0];
       item = coords2item[coords];
       delete coords2item[coords];
       assert(typeof item !== 'undefined');
@@ -948,7 +953,8 @@ class CheckCellQuestion {
     // Find each item in the rank list in the hash.
     var rankList = this.rankListDiv.find('ul').children();
     for (i = 0; i < rankList.length; i++) {
-      coords = $(rankList[i]).text();
+      // XXX: Hack cuz list values are "coords: value".
+      coords = $(rankList[i]).text().split(':')[0];
       item = coords2item[coords];
       delete coords2item[coords];
       assert(typeof item !== 'undefined');
