@@ -593,7 +593,7 @@ class WorksheetTable {
         cursor: 'move',
         revert: 'invalid',
         helper: () => {
-          return $('<span>' + coords2string(data.getCoords()) + '</span>');
+          return $('<li>' + coords2string(data.getCoords()) + '</li>');
         }
       });
     }
@@ -732,7 +732,10 @@ class CheckCellQuestion {
           tolerance: 'pointer',
           accept: () => { return true; },
           drop: (e, ui) => {
-            alert("IT HAPPENED");
+            // Only append if this is a child element of the question div.
+            if ($(ui.draggable).closest('#' + this.getDivId()).length > 0) {
+              ul.append($('<li>').text(ui.helper.text()));
+            }
           }
         })
         .sortable({ revert: 'false' })
