@@ -129,6 +129,9 @@ ul.ccTabList li.ui-tabs-active a:hover
 .ccTab {
     border: 1px solid #aaa;
     display: inline-block;
+    overflow: auto;
+    width: 800px;
+    height: 500px;
 }
 
 div.ccRankList {
