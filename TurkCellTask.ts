@@ -582,6 +582,9 @@ class WorksheetTable {
             cell.removeClass('ccInputUndraggable')
               .addClass('ccInputDraggable')
               .draggable({
+                // appendTo needed for IE8:
+                // http://stackoverflow.com/questions/14603785/jquery-ui-draggable-custom-helper-doesnt-work-correctly-in-ie7
+                appendTo: 'body',
                 cursor: 'move',
                 revert: 'invalid',
                 helper: () => {

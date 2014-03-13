@@ -110,7 +110,7 @@
         var sampleQuestion;
         window.onload = function () {
           sampleQuestion = new CheckCellQuestion(sampleQuestion, 'sample');
-          $('button').on('click', function(ev) {
+          $('#submitButton').on('click', function(ev) {
             try {
                 alert("Output JSON: " + JSON.stringify(sampleQuestion.getRanking()));
             } catch (e) {
@@ -122,6 +122,6 @@
 </head>
 <body>
     <div id="sample"></div>
-    <button>Submit</button>
+    <button id="submitButton">Submit</button>
 </body>
 </html>
