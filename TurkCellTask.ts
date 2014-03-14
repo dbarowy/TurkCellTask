@@ -853,7 +853,7 @@ class WorksheetTable {
         while(this.changedCells.length > 0) {
           cell = this.changedCells.pop();
           if (cols.indexOf(cell.x) === -1) cols.push(cell.x);
-          if (rows.indexOf(cell.y) === -1) cols.push(cell.y);
+          if (rows.indexOf(cell.y) === -1) rows.push(cell.y);
         }
         for (i = 0; i < cols.length; i++) {
           this.updateColHeaderCellWidth(cols[i]); 
