@@ -121,12 +121,12 @@ function getExcelColumn(i: number): string {
   return chars.join('');
 }
 
-function getColClass(wsClassID: string, coords: SpreadsheetCoordinate): string {
-  return wsClassID + 'Col' + getExcelColumn(coords.x); 
+function getColClass(wsClassID: string, col: number): string {
+  return wsClassID + 'Col' + getExcelColumn(col); 
 }
 
-function getRowClass(wsClassID: string, coords: SpreadsheetCoordinate): string {
-  return wsClassID + 'Row' + coords.y; 
+function getRowClass(wsClassID: string, row: number): string {
+  return wsClassID + 'Row' + row; 
 }
 
 /**
@@ -507,11 +507,11 @@ class DataDependencyGraph {
  * have multiple worksheets.
  */
 class WorksheetTable {
-  private containsErrors: boolean = false;
-  private errorCount: number = 0;
   private worksheetClassID: string;
   private width: number;
   private height: number;
+  // Keeps track of cells that have changed since this spreadsheet was last displayed.
+  private changedCells: SpreadsheetCoordinate[] = [];
   
   /* Page elements */
   
@@ -582,7 +582,10 @@ class WorksheetTable {
   private constructSkeleton(): JQuery {
     this.tabAnchor = $('<a>')
         .attr('href', '#' + this.getClassID())
-        .text(this.name);
+        .text(this.name)
+        .on('click', () => {
+          this.updateHeaderCellSizes();
+        });;
     this.tab = $('<li>')
       .append(this.tabAnchor);
     this.colHeader = this.constructColHeader();
@@ -622,9 +625,6 @@ class WorksheetTable {
   }
   
   public getName(): string { return this.name; }
-  public isDisplayingErrors(): boolean {
-    return this.errorCount > 0;
-  }
 
   public getDiv(): JQuery {
     return this.tableDiv;
@@ -641,8 +641,8 @@ class WorksheetTable {
   }
 
   private constructBlankCell(coords: SpreadsheetCoordinate): JQuery {
-    var colClass: string = getColClass(this.getClassID(), coords),
-      rowClass: string = getRowClass(this.getClassID(), coords);
+    var colClass: string = getColClass(this.getClassID(), coords.x),
+      rowClass: string = getRowClass(this.getClassID(), coords.y);
     return $('<td class="' + colClass + ' ' + rowClass + '">');
   }
 
@@ -716,27 +716,15 @@ class WorksheetTable {
       cell.attr('title', output.getFormula());
     }
 
-    var coords = data.getCoords(), 
-      colHeaderCell: JQuery = this.colHeader.find('th:contains("' + getExcelColumn(coords.x) + '")').filter(function() {
-        return $(this).text() == getExcelColumn(coords.x);
-      }),
-      rowHeaderCell: JQuery = this.rowHeader.find('td:contains("' + coords.y + '")').filter(function() {
-        return $(this).text() == "" + coords.y;
-      }),
-      colClass: string = getColClass(this.getClassID(), coords),
-      rowClass: string = getRowClass(this.getClassID(), coords);
+    var coords = data.getCoords();
     // Change events can be triggered by the global spreadsheet, *or* by the
     // above click handler.
     data.addEventListener('changed', (data: DDItem) => {
       // Update displayed value.
       cell.text(data.getValue());
       // Update headers.
-      // Trick from http://stackoverflow.com/a/5784399/3191895
-      // ==> Figure out widest cell in column.
-      // Math.max.apply(Math, $('.image').map(function(){ return $(this).width(); }).get());
-      colHeaderCell.css({ 'min-width': (Math.max.apply(Math, $('.' + colClass).map(function(){ return $(this).width(); }).get())) });
-      // ==> Figure out highest cell in column.
-      rowHeaderCell.height(Math.max.apply(Math, $('.' + rowClass).map(function(){ return $(this).height(); }).get()));
+      this.changedCells.push(data.getCoords());
+      this.updateHeaderCellSizes();
       
       if (data.getType() === DDType.INPUT) {
         if (data.isValueErroneous()) {
@@ -823,6 +811,58 @@ class WorksheetTable {
       }
     }
     return table;
+  }
+  
+  private updateColHeaderCellWidth(col: number) {
+   var colHeaderCell: JQuery = this.colHeader.find('th:contains("' + getExcelColumn(col) + '")').filter(function() {
+      return $(this).text() == getExcelColumn(col);
+    }), colClass: string = getColClass(this.getClassID(), col);
+      
+   colHeaderCell.css({ 'min-width': (Math.max.apply(Math, $('.' + colClass).map(function(){ return $(this).width(); }).get())) });
+  }
+  
+  private updateRowHeaderCellHeight(row: number) {
+    var rowHeaderCell: JQuery = this.rowHeader.find('td:contains("' + row + '")').filter(function() {
+      return $(this).text() == "" + row;
+    }), rowClass: string = getRowClass(this.getClassID(), row);
+    rowHeaderCell.height(Math.max.apply(Math, $('.' + rowClass).map(function(){ return $(this).height(); }).get()));
+  }
+  
+  /**
+   * Is this the active worksheet tab?
+   */
+  private isActive(): boolean {
+    return this.tableDiv.is(':visible')
+  }
+  
+  
+  private headerUpdatePending: boolean = false;
+  /**
+   * Updates all header cells (row and column) to be the appropriate height.
+   */
+  private updateHeaderCellSizes() {
+    if (this.headerUpdatePending) return;
+    // Need to wait until page is redrawn before widths/isActive updates.
+    this.headerUpdatePending = true;
+    setTimeout(() => {
+      this.headerUpdatePending = false;
+      // Ignore if we aren't active.
+      if (this.isActive()) {
+        var cell: SpreadsheetCoordinate, cols: number[] = [], rows: number[] = [],
+          i: number;
+        while(this.changedCells.length > 0) {
+          cell = this.changedCells.pop();
+          if (cols.indexOf(cell.x) === -1) cols.push(cell.x);
+          if (rows.indexOf(cell.y) === -1) cols.push(cell.y);
+        }
+        for (i = 0; i < cols.length; i++) {
+          this.updateColHeaderCellWidth(cols[i]); 
+        }
+        for (i = 0; i < rows.length; i++) {
+          this.updateRowHeaderCellHeight(rows[i]); 
+        }
+      }
+    }, 0);
   }
 }
 
