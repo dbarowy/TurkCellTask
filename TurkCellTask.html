@@ -5,7 +5,8 @@
     <meta charset="utf-8" />
     <title>Sample CheckCell Task</title>
     <link rel="stylesheet" href="//cdnjs.cloudflare.com/ajax/libs/jqueryui/1.10.3/css/base/jquery.ui.resizable.css" />
-    <link rel="stylesheet" href="TurkCellTask.css" />
+    <link rel="stylesheet/less" type="text/css" href="TurkCellTask.less" />
+    <script type="text/javascript" src="//cdnjs.cloudflare.com/ajax/libs/less.js/1.6.3/less.min.js"></script>
     <script type="text/javascript" src="//cdnjs.cloudflare.com/ajax/libs/jquery/1.11.0/jquery.min.js"></script>
     <script type="text/javascript" src="//cdnjs.cloudflare.com/ajax/libs/jqueryui/1.10.3/jquery-ui.min.js"></script>
     <script type="text/javascript" src="TurkCellTask.js"></script>
@@ -83,7 +84,7 @@
                       "italic": false,
                       "underline": false,
                       "font-face": "Wingdings",
-                      "font-size": 11
+                      "font-size": 20
                   }
               }
             ],
@@ -93,7 +94,7 @@
                   "y": 7,
                   "worksheet": "sheet1",
                   "orig": "0.0",
-                  "err": "100",
+                  "err": "100000000000000000000000000",
                   "formula": "=SUM(A1:A10)"
               },
               {
@@ -109,7 +110,7 @@
 
         var sampleQuestion;
         window.onload = function () {
-            sampleQuestion = new CheckCellQuestion(sampleQuestion, 'sample');
+            sampleQuestion = new CheckCellQuestion(sampleQuestion, $('#sample'));
             $('#submitButton').on('click', function (ev) {
                 try {
                     alert("Output JSON: " + JSON.stringify(sampleQuestion.getRanking()));

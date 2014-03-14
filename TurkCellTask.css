@@ -1,3 +1,7 @@
+* {
+    box-sizing: border-box;
+}
+
 /* The table itself */
 table.ccMain, table.ccHeader {
     border: 1px solid #c0c0c0;
@@ -192,10 +196,6 @@ div.ccListsDiv {
 
 
 
-
-* {
-    box-sizing: border-box;
-}
 .topbar-wrapper {
     height: 30px;
     width: 100%;
@@ -231,19 +231,18 @@ div.ccListsDiv {
     height: 100%;
     width: 150%;
 }
-/* Demo styles */
+
 .topbar-wrapper, .sidebar-wrapper, .center-wrapper {
     -webkit-transform: translateZ(0);
+    transform: translateZ(0);
+    -moz-transform: translateZ(0);
+    -ms-transform: translateZ(0);
+    -o-transform: translateZ(0);
+
     -webkit-backface-visibility: hidden;
     -webkit-perspective: 1000;
 }
-.cell {
-    width: 50px;
-    height: 30px;
-    float: left;
-    border: 1px solid black;
-}
-.sidebar .cell {
+.sidebar {
     float: none;
     width: 100%;
 }

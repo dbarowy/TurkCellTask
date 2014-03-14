@@ -107,16 +107,26 @@ interface QuestionInfo {
 
 /**
  * Converts a number into an Excel column ID.
- * e.g. 0 => A, 26 => AA.
+ * e.g. 1 => A, 27 => AA.
  */
 function getExcelColumn(i: number): string {
   var chars: string[] = [];
+  // Excel is 1-based, algorithm is 0-based.
+  i--;
   do {
     chars.push(String.fromCharCode(65 + (i % 26)));
     i = Math.floor(i / 26) - 1;
   } while (i > -1);
   chars.reverse();
   return chars.join('');
+}
+
+function getColClass(wsClassID: string, coords: SpreadsheetCoordinate): string {
+  return wsClassID + 'Col' + getExcelColumn(coords.x); 
+}
+
+function getRowClass(wsClassID: string, coords: SpreadsheetCoordinate): string {
+  return wsClassID + 'Row' + coords.y; 
 }
 
 /**
@@ -134,7 +144,7 @@ function nextId(): number {
 }
 
 function coords2string(coords: SpreadsheetCoordinate): string {
-  return coords.worksheet + " " + getExcelColumn(coords.y - 1) + (coords.x);
+  return coords.worksheet + " " + getExcelColumn(coords.x) + (coords.y);
 }
 
 // #endregion Helper Functions
@@ -170,6 +180,9 @@ interface DDItem {
    * highlighted or not.
    */
   isValueErroneous(): boolean;
+  /**
+   * Get the coordinates of the item.
+   */
   getCoords(): SpreadsheetCoordinate;
 }
 
@@ -382,7 +395,7 @@ class InputItem extends ChangeObservable<InputItem> implements DDItem {
 class DataDependencyGraph {
   /**
    * Three dimensional matrix. Cell items are at:
-   * this.data[worksheet][x][y]
+   * this.data[worksheet][row][col]
    */
   private data: { [worksheet: string]: DDItem[][] } = {};
   private inputs: InputItem[] = [];
@@ -414,42 +427,6 @@ class DataDependencyGraph {
   }
 
   /**
-   * Get the maximum row width.
-   */
-  public getWidth(): number {
-    var ws: string, wsData: DDItem[][], row: DDItem[], i: number,
-      width: number = 0;
-    for (ws in this.data) {
-      if (this.data.hasOwnProperty(ws)) {
-        wsData = this.data[ws];
-        for (i = 0; i < wsData.length; i++) {
-          row = wsData[i];
-          if (row.length > width) {
-            width = row.length;
-          }
-        }
-      }
-    }
-    return width;
-  }
-
-  /**
-   * Get the maximum column height.
-   */
-  public getHeight(): number {
-    var ws: string, wsData: DDItem[][], height: number = 0;
-    for (ws in this.data) {
-      if (this.data.hasOwnProperty(ws)) {
-        wsData = this.data[ws];
-        if (wsData.length > height) {
-          height = wsData.length;
-        }
-      }
-    }
-    return height;
-  }
-
-  /**
    * ABSTRACTIONS!
    */
   public getData(): { [worksheet: string]: DDItem[][] } {
@@ -467,20 +444,20 @@ class DataDependencyGraph {
     }
 
     // Does the row exist?
-    var row = wsData[coord.x];
+    var row = wsData[coord.y];
     if (!row) {
       var width = wsData.length, i: number;
-      for (i = width; i <= coord.x; i++) {
+      for (i = width; i <= coord.y; i++) {
         wsData[i] = [];
       }
-      row = wsData[coord.x] = [];
+      row = wsData[coord.y] = [];
     }
 
     if (row.length < coord.y) {
       // Pad with empty entries.
-      this.data[coord.worksheet][coord.x] = row = row.concat(new Array(coord.y - row.length + 1));
+      this.data[coord.worksheet][coord.y] = row = row.concat(new Array(coord.x - row.length + 1));
     }
-    row[coord.y] = item;
+    row[coord.x] = item;
   }
 
   /**
@@ -497,13 +474,13 @@ class DataDependencyGraph {
   /**
    * Get the specified row.
    */
-  public getRow(ws: string, col: number): DDItem[] {
+  public getRow(ws: string, row: number): DDItem[] {
     var wsData = this.getWs(ws),
-      colData = wsData[col];
-    if (typeof colData === 'undefined') {
-      throw new Error('Invalid row: ' + ws + ", " + col);
+      rowData = wsData[row];
+    if (typeof rowData === 'undefined') {
+      throw new Error('Invalid row: ' + ws + ", " + row);
     }
-    return colData;
+    return rowData;
   }
 
   /**
@@ -511,7 +488,7 @@ class DataDependencyGraph {
    * if not found.
    */
   public getItem(coord: SpreadsheetCoordinate): DDItem {
-    var row = this.getRow(coord.worksheet, coord.x), item = row[coord.y];
+    var row = this.getRow(coord.worksheet, coord.y), item = row[coord.x];
     assert(typeof item !== 'undefined', "Invalid coordinate: " + coord.worksheet + ', ' + coord.x + ', ' + coord.y);
     return item;
   }
@@ -531,46 +508,119 @@ class DataDependencyGraph {
  */
 class WorksheetTable {
   private containsErrors: boolean = false;
-  private tableDiv: JQuery;
   private errorCount: number = 0;
-  private tabHighlighted: boolean = false;
+  private worksheetClassID: string;
+  private width: number;
+  private height: number;
+  
+  /* Page elements */
+  
+  /**
+   * The ccTab <div> that encapsulates the entire worksheet.
+   */
+  private tableDiv: JQuery;
+  /**
+   * The column header <table>.
+   */
+  private colHeader: JQuery;
+  /**
+   * The row header <table>.
+   */
+  private rowHeader: JQuery;
+  /**
+   * The worksheet's tab <li>.
+   */
+  private tab: JQuery;
+  /**
+   * The worksheet's tab <a>.
+   */
+  private tabAnchor: JQuery;
+  /**
+   * The body of the spreadsheet, containing all of the data.
+   */
+  private body: JQuery;
 
   /**
    * @param data The data to display in the worksheet.
-   * @param width The width of the table. Specified here so all worksheets are
-   *   equal widths.
-   * @param height The height of the table. Specified here so all worksheets
-   *   are equal heights.
    * @param question The CheckCellQuestion that this worksheet belongs to.
    */
-  constructor(private question: CheckCellQuestion, private name: string, private tabAnchor: JQuery, private data: DDItem[][],
-    private width: number, private height: number) {
-     // TODO: Column headers and rows need to listen to cell events!
-     // can ignore context or empty cells.
-      var colHeader: JQuery = this.constructColHeader(),
-        rowHeader: JQuery = this.constructRowHeader(),
-        body: JQuery = this.constructTable(),
-        center_wrapper: JQuery = $('<div>')
-            .addClass('center-wrapper')
-            .append(body.addClass('center')),
-        container: JQuery = $('<div>')
-          .addClass('container')
-          .append(center_wrapper)
-          .append(rowHeader);
-
-      this.tableDiv = $('<div>')
-        .addClass('ccTab')
-        .attr('id', tabAnchor.attr('href').slice(1))
-        .attr('title', this.name)
-        .append(colHeader)
-        .append(container);
-
-    center_wrapper.scroll(function (e) {
-      $('.sidebar-wrapper').scrollTop($(this).scrollTop());
-      $('.topbar-wrapper').scrollLeft($(this).scrollLeft());
+  constructor(private question: CheckCellQuestion, private name: string, private data: DDItem[][]) {
+    this.width = this.calculateWidth();
+    this.height = this.calculateHeight();
+    this.worksheetClassID = this.question.getClassID() + this.name;
+    this.tableDiv = this.constructSkeleton();
+    
+    // Scroll row/col headers when body scrolls.
+    this.tableDiv.find('.ccWorksheetBody-wrapper').scroll(function (e) {
+      $('.ccRowHeader-wrapper').scrollTop($(this).scrollTop());
+      $('.ccColHeader-wrapper').scrollLeft($(this).scrollLeft());
     });
   }
-
+  
+  public getClassID(): string {
+    return this.worksheetClassID; 
+  }
+  
+  public getTab(): JQuery {
+    return this.tab; 
+  }
+  
+  private calculateHeight(): number {
+    return this.data.length;
+  }
+  
+  private calculateWidth(): number {
+    var i: number, maxLength: number = 0;
+    for (i = 0; i < this.data.length; i++) {
+      if (this.data[i].length > maxLength) {
+        maxLength = this.data[i].length;  
+      }
+    }
+    return maxLength;
+  }
+  
+  private constructSkeleton(): JQuery {
+    this.tabAnchor = $('<a>')
+        .attr('href', '#' + this.getClassID())
+        .text(this.name);
+    this.tab = $('<li>')
+      .append(this.tabAnchor);
+    this.colHeader = this.constructColHeader();
+    this.rowHeader = this.constructRowHeader();
+    return $('<div class="ccTab ' + this.getClassID() + '" id="' + this.getClassID() + '">')
+      .append($('<div class="ccTabContents">')
+        .append($('<div class="ccColHeader-wrapper">')
+          .append(this.colHeader)
+        )
+        .append($('<div class="ccBottom-wrapper">')
+          .append($('<div class="ccRowHeader-wrapper">')
+            .append(this.rowHeader)
+          )
+          .append($('<div class="ccWorksheetBody-wrapper">'))
+       )
+     ); 
+  }
+  
+  public fillInSkeleton(): void {
+    var bodyWrapper: JQuery = this.tableDiv.find('.ccWorksheetBody-wrapper'),
+      i: number, j: number, row: DDItem[];
+    this.body = this.constructBody(); 
+    bodyWrapper.append(this.body);
+    // Insert into page.
+    this.tableDiv.find('.ccBottom-wrapper').append(bodyWrapper);
+    // Update rowHeaderHeader's width.
+    this.colHeader.find('.ccRowHeaderHeader').css({ 'min-width': (this.rowHeader.width()) });
+    // Update all cells, now that they are in the page.
+    for (i = 0; i < this.data.length; i++) {
+      row = this.data[i];
+      for (j = 0; j < row.length; j++) {
+        if (typeof row[j] !== 'undefined') {
+          row[j].fireEvent('changed', row[j]);
+        }
+      }
+    }
+  }
+  
   public getName(): string { return this.name; }
   public isDisplayingErrors(): boolean {
     return this.errorCount > 0;
@@ -581,22 +631,23 @@ class WorksheetTable {
   }
 
   public toggleHighlighting(enable: boolean) {
-    if (enable !== this.tabHighlighted) {
-      this.tabHighlighted = enable;
+    if (enable !== this.tabAnchor.hasClass('ccWsTabChange')) {
       if (enable) {
-        this.tabAnchor.text(this.name + '*').addClass('ccWsTabChange');
+        this.tabAnchor.text(this.name + '*').addClass('ccTabChanged');
       } else {
-        this.tabAnchor.text(this.name).removeClass('ccWsTabChange');
+        this.tabAnchor.text(this.name).removeClass('ccTabChanged');
       }
     }
   }
 
-  private constructBlankCell(): JQuery {
-    return $('<td>');
+  private constructBlankCell(coords: SpreadsheetCoordinate): JQuery {
+    var colClass: string = getColClass(this.getClassID(), coords),
+      rowClass: string = getRowClass(this.getClassID(), coords);
+    return $('<td class="' + colClass + ' ' + rowClass + '">');
   }
 
   private constructCell(data: DDItem): JQuery {
-    var cell: JQuery = this.constructBlankCell();
+    var cell: JQuery = this.constructBlankCell(data.getCoords());
     if (data.getType() === DDType.INPUT) {
       cell.addClass('ccInput');
     } else {
@@ -637,7 +688,7 @@ class WorksheetTable {
 
         data.addEventListener('draggableChanged', (data: DDItem) => {
           if (input.isDraggable()) {
-            cell.removeClass('ccInputUndraggable')
+            cell.removeClass('ccInputDisabledDraggable')
               .addClass('ccInputDraggable')
               .draggable({
                 // appendTo needed for IE8:
@@ -646,12 +697,12 @@ class WorksheetTable {
                 cursor: 'move',
                 revert: 'invalid',
                 helper: () => {
-                  return $('<li>' + coords2string(data.getCoords()) + ': ' + input.getErrorValue() + '</li>').addClass('ccListItem').data("DDItem", data);
+                  return $('<li class="ccSortableListItem">' + coords2string(data.getCoords()) + ': ' + input.getErrorValue() + '</li>').data("DDItem", data);
                 }
               });
           } else {
             cell.removeClass('ccInputDraggable')
-              .addClass('ccInputUndraggable')
+              .addClass('ccInputDisabledDraggable')
               .draggable('destroy');
           }
         });
@@ -665,26 +716,43 @@ class WorksheetTable {
       cell.attr('title', output.getFormula());
     }
 
+    var coords = data.getCoords(), 
+      colHeaderCell: JQuery = this.colHeader.find('th:contains("' + getExcelColumn(coords.x) + '")').filter(function() {
+        return $(this).text() == getExcelColumn(coords.x);
+      }),
+      rowHeaderCell: JQuery = this.rowHeader.find('td:contains("' + coords.y + '")').filter(function() {
+        return $(this).text() == "" + coords.y;
+      }),
+      colClass: string = getColClass(this.getClassID(), coords),
+      rowClass: string = getRowClass(this.getClassID(), coords);
     // Change events can be triggered by the global spreadsheet, *or* by the
     // above click handler.
     data.addEventListener('changed', (data: DDItem) => {
       // Update displayed value.
       cell.text(data.getValue());
+      // Update headers.
+      // Trick from http://stackoverflow.com/a/5784399/3191895
+      // ==> Figure out widest cell in column.
+      // Math.max.apply(Math, $('.image').map(function(){ return $(this).width(); }).get());
+      colHeaderCell.css({ 'min-width': (Math.max.apply(Math, $('.' + colClass).map(function(){ return $(this).width(); }).get())) });
+      // ==> Figure out highest cell in column.
+      rowHeaderCell.height(Math.max.apply(Math, $('.' + rowClass).map(function(){ return $(this).height(); }).get()));
+      
       if (data.getType() === DDType.INPUT) {
         if (data.isValueErroneous()) {
           // Add the 'erroneous' style.
-          cell.addClass('ccInputError');
+          cell.addClass('ccInputCellError');
         } else {
           // Remove the 'erroneous' style.
-          cell.removeClass('ccInputError');
+          cell.removeClass('ccInputCellError');
         }
       } else {
         // Check if we are in NO_ERROR or ALL_BUT_ONE_ERROR.
         if (this.question.getStatus() !== SpreadsheetStatus.ALL_ERRORS) {
-          cell.addClass('ccOutputChange');
+          cell.addClass('ccChangedOutputCell');
           this.question.addToChangeList(<OutputItem>data);
         } else {
-          cell.removeClass('ccOutputChange');
+          cell.removeClass('ccChangedOutputCell');
           this.question.removeFromChangeList(<OutputItem>data);
         }
       }
@@ -693,8 +761,6 @@ class WorksheetTable {
       // error.
       this.toggleHighlighting((!data.isValueErroneous()) && this.question.getStatus() === SpreadsheetStatus.ALL_BUT_ONE_ERROR);
     });
-    // Bootstrap cell value.
-    data.fireEvent('changed', data);
     return cell;
   }
 
@@ -708,7 +774,7 @@ class WorksheetTable {
     for (i = 1; i < this.width; i++) {
       item = row[i];
       if (typeof item === 'undefined') {
-        tr.append(this.constructBlankCell());
+        tr.append(this.constructBlankCell({worksheet: this.name, y: rowId, x: i}));
       } else {
         tr.append(this.constructCell(item));
       }
@@ -717,45 +783,37 @@ class WorksheetTable {
   }
 
   private constructRowHeader(): JQuery {
-    var table: JQuery = $('<table>').addClass('ccHeader').addClass('sidebar'), i: number, tr: JQuery;
+    var table: JQuery = $('<table class="ccRowHeader">'), i: number, tr: JQuery;
     // XXX: Excel is 1-indexed.
     for (i = 1; i < this.height; i++) {
       tr = $('<tr>');
-      tr.append(this.constructBlankCell()
-        .addClass('ccHeader')
+      tr.append($('<td>')
         .text(i)
       );
       table.append(tr);
     }
-    return $('<div>').addClass('sidebar-wrapper').append(table);
+    return table;
   }
 
   private constructColHeader(): JQuery {
-    var table: JQuery = $('<table>').addClass('ccHeader').addClass('topbar'), i: number,
-      tr = $('<tr>');
+    var table: JQuery = $('<table class="ccColHeader">'), i: number, tr = $('<tr>');
     // Construct header.
-    tr.append($('<th>')
-      .addClass('ccHeader')
-      .addClass('ccRowHeaderHeader')
-      );
+    tr.append($('<th class="ccRowHeaderHeader">'));
     // XXX: Excel is 1-indexed.
     for (i = 1; i < this.width; i++) {
-      tr.append($('<th>')
-        .addClass('ccHeader')
-        .text(getExcelColumn(i - 1))
-      );
+      tr.append($('<th>' + getExcelColumn(i) + '</th>'));
     }
-    return $('<div>').addClass('topbar-wrapper').append(table.append(tr));
+    return table.append(tr);
   }
-
+  
   /**
    * Constructs the <table> and its header.
    */
-  private constructTable(): JQuery {
+  private constructBody(): JQuery {
     var table: JQuery,
       i: number, tr: JQuery = $('<tr>');
 
-    table = $('<table>').addClass('ccMain');
+    table = $('<table class="ccWorksheetBody">');
     // XXX: Excel is 1-indexed.
     for (i = 1; i < this.height; i++) {
       if (i < this.data.length) {
@@ -781,122 +839,134 @@ enum SpreadsheetStatus {
 /**
  * Represents a single CheckCell question. Given a JSON object and a div id, it
  * will display the specified ranking question in the given div.
- * @todo track active cells through spreadsheets, deactivate when needed
- * @todo track/handle switching active worksheets.
  */
 class CheckCellQuestion {
   private graph: DataDependencyGraph;
-  private parentDiv: JQuery;
-  private questionDiv: JQuery;
   private status: SpreadsheetStatus = SpreadsheetStatus.ALL_ERRORS;
   private tables: { [ws: string]: WorksheetTable } = {};
   private disabledError: InputItem = null;
+  private questionClassID: string = 'ccQuestion' + nextId();
+  
+  /* Question elements */
+  
+  /**
+   * The div that the question is situated in.
+   */
+  private questionDiv: JQuery;
+  /**
+   * The <button> that toggles all errors on/off.
+   */
   private toggleButton: JQuery;
-
-  // Used for drag n' drop events.
-  private rankListDiv: JQuery;
-  private unimportantListDiv: JQuery;
-
-  // Displays changed cells.
-  private changeListDiv: JQuery;
+  /**
+   * The changed items <ul> list.
+   */
+  private changedList: JQuery;
+  /**
+   * The ranked items <ul> list.
+   */
+  private rankedList: JQuery;
+  /**
+   * The unimportant items <ul> list.
+   */
+  private unimportantList: JQuery;
+  /**
+   * The tab <ul> list.
+   */
+  private tabList: JQuery;
 
   /**
    * @param data The JSON object with the question information.
    * @param divId The ID of the div where the question should be injected.
    */
-  constructor(private data: QuestionInfo, private divId: string) {
+  constructor(private data: QuestionInfo, parentDiv: JQuery) {
     this.graph = new DataDependencyGraph(data);
-    this.questionDiv = $('<div>').addClass('ccQuestionDiv').attr('id', 'ccQuestion' + nextId());
-
-    var graphData = this.graph.getData(), i: number, ws: string,
-      width: number = this.graph.getWidth(),
-      height: number = this.graph.getHeight(), tab: JQuery,
-      wsTable: WorksheetTable, tabList: JQuery = $('<ul>').addClass('ccTabList');
-
-    this.questionDiv.append(tabList);
+    this.questionDiv = $('<div class="ccQuestionDiv ' + this.getClassID() + '" >');
+    this.questionDiv = this.constructSkeleton();
+    parentDiv.append(this.questionDiv);
+    setTimeout(() => {
+      this.fillInSkeleton();
+    }, 0);
+  }
+  
+  /**
+   * Constructs a skeleton of the question div.
+   */
+  private constructSkeleton(): JQuery {
+    var changedListDiv: JQuery = this.constructChangedList();
+    this.changedList = changedListDiv.find('ul');
+    this.toggleButton = this.constructToggleButton();
+    this.tabList = $('<ul class="ccTabList">');
+    return $('<div class="ccQuestion ' + this.getClassID() + '">')
+      .append($('<div class="ccTabs">').append(this.tabList))
+      .append(changedListDiv)
+      .append(this.constructInputLists())
+      .append(this.toggleButton);
+  }
+  
+  /**
+   * Fills in the question div skeleton.
+   */
+  private fillInSkeleton(): void {
+    var graphData = this.graph.getData(), i: number, ws: string, wsTable: WorksheetTable,
+      tabsDiv: JQuery = this.questionDiv.find('.ccTabs');
     for (ws in graphData) {
       if (graphData.hasOwnProperty(ws)) {
-        // Create tab.
-        tab = $('<li>')
-          .append($('<a>')
-            .attr('href', '#ccTab' + nextId())
-            .text(ws)
-          );
-        tabList.append(tab);
-        // Create body.
+        // Create worksheet.
         // NOTE: WST wants the anchor, not the list element.
-        wsTable = new WorksheetTable(this, ws, $(tab.find('a')[0]), graphData[ws], width, height);
+        wsTable = new WorksheetTable(this, ws, graphData[ws]);
         this.tables[ws] = wsTable;
-        this.questionDiv.append(wsTable.getDiv());
+        // Append to page.
+        this.tabList.append(wsTable.getTab());
+        tabsDiv.append(wsTable.getDiv());
+        // Fill it in.
+        wsTable.fillInSkeleton();
       }
-    }
-
-    this.parentDiv = $('#' + divId).append(this.questionDiv);
-    // Enable tabs.
+    } 
     this.questionDiv.tabs();
-
-    this.changeListDiv = $('<div>')
-      .addClass('changeList')
-      .append($('<h5>Changed Outputs</h5>'))
-      .append($('<ul>'));
-    this.parentDiv.append(this.changeListDiv);
-
-    // Ranking table.
-    var sharedListClass = 'dragList' + nextId(), self = this,
-      dropHandler = function (e, ui) {
-        // Only append if this is a child element of the question div.
-        if ($(ui.draggable).closest('#' + self.questionDiv.attr('id')).length > 0) {
-          var item: InputItem = ui.helper.data('DDItem'),
-            helper: JQuery = ui.helper;
-          $(this).append($('<li>').text(helper.text()).addClass('ccListItem').data('DDItem', item));
-          // Wait one turn for jQuery UI to do it's thing before we disable
-          // dragging.
-          setTimeout(() => { item.setDraggable(false); }, 0);
-        }
-      };
-    this.rankListDiv = $('<div>')
-      .addClass('ccRankList')
-      .append($('<h4>Ranked List</h4>'))
-      .append($('<ul>')
-        .addClass(sharedListClass)
+  }
+  
+  private constructSortableList(title: string, commonClass: string): JQuery {
+    var self: CheckCellQuestion = this;
+    return $('<div>')
+      .append('<h4>' + title + '</h4>')
+      .append($('<ul class="' + commonClass + '">')
         .sortable({
           revert: 'false',
-          connectWith: '.' + sharedListClass,
-          placeholder: 'ccPlaceholder'
+          connectWith: '.' + commonClass,
+          placeholder: 'ccPlaceholderItem'
         })
         .droppable({
           tolerance: 'pointer',
           accept: () => { return true; },
-          drop: dropHandler
+          drop: function (e, ui) {
+            // Only append if the item is a child element of the tabs of the question div.
+            var draggable: JQuery = $(ui.draggable);
+            if (draggable.closest('.ccTab').length > 0 && draggable.closest('.' + self.getClassID()).length > 0) {
+              var item: InputItem = ui.helper.data('DDItem'),
+                helper: JQuery = ui.helper;
+              $(this).append($('<li>').text(helper.text()).data('DDItem', item));
+              // Wait one turn for jQuery UI to do it's thing before we disable
+              // dragging. Otherwise, strange things happen.
+              setTimeout(() => { item.setDraggable(false); }, 0);
+            }
+          }
         })
       );
-
-    // Unimportant table.
-    this.unimportantListDiv = $('<div>')
-      .addClass('ccUnimportantList')
-      .append($('<h4>Unimportant Inputs</h4>'))
-      .append($('<ul>')
-        .addClass(sharedListClass)
-        .sortable({
-          revert: 'false',
-          connectWith: '.' + sharedListClass,
-          placeholder: 'ccPlaceholder'
-        })
-        .droppable({
-          tolerance: 'pointer',
-          accept: () => { return true; },
-          drop: dropHandler
-        })
-      );
-
-    // Encapsulate both into a master div.
-    this.parentDiv.append($('<div>')
-      .addClass('ccListsDiv')
-      .append(this.rankListDiv)
-      .append(this.unimportantListDiv));
-
-    // Button to toggle all errors.
-    this.toggleButton = $('<button>')
+  }
+  
+  private constructInputLists(): JQuery {
+    var commonID: string = this.getClassID() + "InputLists",
+      rankedListDiv: JQuery = this.constructSortableList('Ranked Inputs', commonID),
+      unimportantListDiv: JQuery = this.constructSortableList('Unimportant Inputs', commonID);
+    this.rankedList = rankedListDiv.find('ul');
+    this.unimportantList = unimportantListDiv.find('ul');
+    return $('<div class="ccListsDiv">')
+      .append(rankedListDiv)
+      .append(unimportantListDiv); 
+  }
+  
+  private constructToggleButton(): JQuery {
+    return $('<button>')
       .text("Toggle errors off")
       .on('click', (ev): void => {
         if (this.toggleButton.text() === 'Toggle errors off') {
@@ -906,25 +976,30 @@ class CheckCellQuestion {
           this.changeStatus(SpreadsheetStatus.ALL_ERRORS);
           this.toggleButton.text("Toggle errors off");
         }
-      });
-    this.parentDiv.append($('<br>')).append(this.toggleButton);
+      }); 
   }
-
+  
+  private constructChangedList(): JQuery {
+    return $('<div class="ccChangedList"><h5>Changed Outputs</h5><ul></ul></div>');
+  }
+  
+  public getClassID(): string {
+    return this.questionClassID; 
+  }
+  
   public addToChangeList(output: OutputItem): void {
-    var changeList = this.changeListDiv.find('ul'),
-      coords = coords2string(output.getCoords());
-    if (changeList.find("li:contains('" + coords + "')").length === 0) {
-      changeList.append($('<li>').text(coords));
+    // Race condition :(
+    if (this.changedList == null) return;
+    var coords = coords2string(output.getCoords());
+    if (this.changedList.find("li:contains('" + coords + "')").length === 0) {
+      this.changedList.append($('<li>').text(coords));
     }
   }
 
   public removeFromChangeList(output: OutputItem): void {
-    // Race condition avoidance.
-    if (typeof this.changeListDiv === 'undefined') return;
-    var changeList = this.changeListDiv.find('ul'),
-      coords = coords2string(output.getCoords());
+    var coords = coords2string(output.getCoords());
 
-    changeList.find("li:contains('" + coords + "')").remove();
+    this.changedList.find("li:contains('" + coords + "')").remove();
   }
 
   public getRanking(): { unimportant: SpreadsheetCoordinate[]; ranking: SpreadsheetCoordinate[] } {
@@ -941,7 +1016,7 @@ class CheckCellQuestion {
     }
 
     // Find each item in the unimportant list in the hash.
-    var unimportantList = this.unimportantListDiv.find('ul').children();
+    var unimportantList = this.unimportantList.children();
     for (i = 0; i < unimportantList.length; i++) {
       // XXX: Hack cuz list values are "coords: value".
       coords = $(unimportantList[i]).text().split(':')[0];
@@ -952,7 +1027,7 @@ class CheckCellQuestion {
     }
 
     // Find each item in the rank list in the hash.
-    var rankList = this.rankListDiv.find('ul').children();
+    var rankList = this.rankedList.children();
     for (i = 0; i < rankList.length; i++) {
       // XXX: Hack cuz list values are "coords: value".
       coords = $(rankList[i]).text().split(':')[0];
@@ -968,21 +1043,6 @@ class CheckCellQuestion {
     }
 
     return rv;
-  }
-
-  public getDivId(): string { return this.divId; }
-
-  private getWorksheetTab(wsName: string): JQuery {
-    var tabDiv = this.parentDiv.find('.tabberlive'),
-      tab = tabDiv.find("a:contains('" + wsName + "')");
-    if (tab.length > 0) {
-      assert(tab.length === 1);
-      return $(tab[0]);
-    } else {
-      tab = tabDiv.find("a:contains('" + wsName + "*')");
-      assert(tab.length === 1);
-      return $(tab[0]);
-    }
   }
 
   /**
