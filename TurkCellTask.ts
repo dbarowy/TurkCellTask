@@ -826,7 +826,6 @@ class WorksheetTable {
       return $(this).text() == "" + row;
     }), rowClass: string = getRowClass(this.getClassID(), row);
     rowHeaderCell.parent().height($('.' + rowClass).parent().outerHeight());
-    //rowHeaderCell.height(Math.max.apply(Math, $('.' + rowClass).map(function(){ return $(this).outerHeight(); }).get()));
   }
   
   /**
