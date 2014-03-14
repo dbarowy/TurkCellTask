@@ -1,0 +1,397 @@
+/*
+  LESS Variables
+ */
+// Size of each tab.
+@tabWidth: 800px;
+@tabHeight: 500px;
+@rowHeaderWidth: 35px;
+@colHeaderHeight: 22px;
+@worksheetBodyWidth: @tabWidth - @rowHeaderWidth;
+@worksheetBodyHeight: @tabHeight - @colHeaderHeight;
+
+@normalCellBorder: 1px solid #c0c0c0;
+@headerCellBorder: 1px solid #7e7d68;
+@outputCellBorder: 2px solid black;
+
+@defaultCellWidth: 65px;
+@defaultCellHeight: 22px;
+
+@headerCellBackground: #e5e4e8;
+
+@tabBorder: 1px solid #aaa;
+
+/*
+  LESS Mixins and Functions
+ */
+.border-radius(@radius) {
+  -webkit-border-radius: @radius;
+     -moz-border-radius: @radius;
+          border-radius: @radius;
+}
+.user-select(@select) {
+  -webkit-touch-callout: @select;
+    -webkit-user-select: @select;
+     -khtml-user-select: @select;
+       -moz-user-select: @select;
+        -ms-user-select: @select;
+            user-select: @select;
+}
+.transform(@function) {
+  -webkit-transform: @function;
+     -moz-transform: @function;
+      -ms-transform: @function;
+       -o-transform: @function;
+          transform: @function;
+}
+.backface-visibility(@val) {
+  -webkit-backface-visibility: @val;
+     -moz-backface-visibility: @val;
+          backface-visibility: @val;
+}
+.perspective(@val) {
+  -webkit-perspective: @val;
+     -moz-perspective: @val;
+          perspective: @val;
+}
+/*
+  Triggers GPU accelerated scrolling in some modern browsers.
+ */
+.fast-scrolling() {
+  .transform(translateZ(0));
+  .backface-visibility(hidden);
+  .perspective(1000);
+}
+/*
+  A normal cell.
+ */
+.normalCell() {
+  text-align: right;
+  border: @normalCellBorder;
+  .user-select(none);
+  cursor: default;
+  min-width: @defaultCellWidth;
+  height: @defaultCellHeight;
+}
+/*
+  All header cells (row and column)
+ */
+.headerCell() {
+  border: @headerCellBorder;
+  text-align: center;
+  background: @headerCellBackground;
+}
+/*
+  Column headers (e.g. they display A1, A2, ...).
+ */
+.colHeaderCell() {
+  .normalCell;
+  .headerCell !important;
+  min-width: 65px;
+}
+/*
+  Row headers (e.g. 1 2 3 4...).
+ */
+.rowHeaderCell() {
+  .normalCell;
+  .headerCell !important;
+  min-width: 28px;
+  font-weight: bold;
+}
+/*
+  All (non-contextual) input cells.
+ */
+.inputCell() {
+  .normalCell;
+}
+/*
+  *Additive* style to an input cell when it's displaying an error (e.g. it's
+  added to an input cell that already has 'input cell')
+ */
+.inputCellError() {
+  background: #ff0000;
+}
+/*
+  A cell that can be dragged.
+ */
+.draggableCell() {
+  cursor: move;
+}
+/*
+  A cell that could previously be dragged (or that normally could be dragged),
+  but cannot be dragged at the moment.
+ */
+.disabledDraggableCell() {
+  color: #808080;
+  border-color: #808080;
+}
+/*
+  An output cell.
+ */
+.outputCell() {
+  border: @outputCellBorder;
+}
+/*
+  An output cell that has been changed due to an input changing.
+ */
+.changedOutputCell() {
+  background-color: yellow;
+}
+/*
+  Style applied when a worksheet tab changes due to an input changing.
+ */
+.changedWorksheetTab() {
+  color: #ff0000;
+  font-weight: bold;
+}
+/*
+  A list item in a sortable list.
+ */
+.sortableListItem() {
+  list-style: none;
+  cursor: move;
+}
+/*
+  A placeholder item in a sortable list. Used when hovering an item over the
+  list.
+ */
+.sortableListPlaceholderItem {
+  border: 1px solid #fcefa1;
+  background: #fbf9ee;
+  color: #363636;
+  list-style: none;
+  height: 1em;
+}
+/*
+  A sortable list (e.g. rank list / unimportant list)
+ */
+.sortableList() {
+  display: inline-block;
+  vertical-align: top;
+  margin: 5px;
+  width: 250px;
+  // Title text
+  h4 {
+    text-align: center;
+  }
+  // The list itself
+  ul {
+    // List item
+    li {
+      .sortableListItem;
+    }
+    padding: 5px;
+    background-color: #c0c0c0;
+    min-height: 1em;
+  }
+}
+
+/*
+  CSS Classes
+
+  I prefix all classes with 'cc' to avoid conflict.
+ */
+// Applied to everything.
+* {
+  // See http://www.paulirish.com/2012/box-sizing-border-box-ftw/
+  box-sizing: border-box;
+  // Avoid extraneous resize toggles. I want to control what can be resized.
+  resize: none;
+}
+
+/* One entire question */
+.ccQuestion {}
+
+/* All tabs */
+div.ccTabs {}
+
+/* One single tab */
+
+div.ccTab {
+  position: relative;
+  // Causes tab to size appropriately to its contents, which is what we
+  // want. Otherwise, its border extends to the width of the page.
+  display: inline-block;
+  border: @tabBorder;
+}
+
+div.ccTabContents {
+  position: relative;
+  overflow: auto;
+  width: @tabWidth;
+  height: @tabHeight;
+  /* Fancy resize functionality in modern browsers. */
+  resize: both;
+}
+
+/* Column header */
+
+div.ccColHeader-wrapper {
+  .fast-scrolling();
+  height: @colHeaderHeight;
+  width: 100%;
+  position: absolute;
+  top: 0;
+  left: 0;
+  overflow: hidden;
+}
+
+table.ccColHeader {
+  th {
+    .colHeaderCell;
+  }
+
+  // The column header to the row header.
+  th.ccRowHeaderHeader {
+    .colHeaderCell;
+    .rowHeaderCell;
+  }
+  border-collapse: collapse;
+  height: 100%;
+}
+
+/* Bottom-portion */
+
+// Wraps both the row header and the worksheet body.
+div.ccBottom-wrapper {
+  .fast-scrolling();
+  padding-top: @colHeaderHeight;
+  height: 100%;
+}
+
+/* Row header */
+
+div.ccRowHeader-wrapper {
+  .fast-scrolling();
+  width: @rowHeaderWidth;
+  float: left;
+  overflow: hidden;
+  height: 100%;
+}
+
+table.ccRowHeader {
+  float: none;
+  width: 100%;
+  border-collapse: collapse;
+  tr {
+    td {
+      .rowHeaderCell;
+    }
+  }
+}
+
+/* Worksheet body */
+
+div.ccWorksheetBody-wrapper {
+  .fast-scrolling();
+  // todo: does this need to be set explicitly?
+  height: 100%;
+  width: @worksheetBodyWidth;
+  float: right;
+  overflow: scroll;
+}
+
+table.ccWorksheetBody {
+  border-collapse: collapse;
+  //border: @normalCellBorder;
+  //height: 100%;
+  //width: 100%;
+  tr {
+    td {
+      .normalCell;
+    }
+    td.ccOutput {
+      .outputCell();
+    }
+    td.ccInput {
+      .inputCell();
+    }
+    td.ccInputCellError {
+      .inputCellError !important;
+    }
+    td.ccInputDraggable {
+      .draggableCell !important;
+    }
+    td.ccInputDisabledDraggable {
+      .disabledDraggableCell;
+    }
+    td.ccChangedOutputCell {
+      .changedOutputCell !important;
+    }
+  }
+}
+
+/* Tab List */
+
+ul.ccTabList {
+  margin:0;
+  padding: 3px 0;
+  font: bold 12px Arial, sans-serif;
+
+  li {
+    list-style: none;
+    margin: 0;
+    display: inline;
+    a {
+      padding: 3px 0.5em;
+      margin-left: 3px;
+      border: 1px solid #778;
+      border-bottom: none;
+      background: #DDE;
+      text-decoration: none;
+    }
+    a:link { color: #448; }
+    a:visited { color: #667; }
+    a:hover {
+      color: #000;
+      background: #AAE;
+      border-color: #227;
+      padding: 5px;
+    }
+  }
+  li.ccTabChanged {
+    a {
+      color: #ff0000 !important;
+      font-weight: bold;
+    }
+  }
+
+  li.ui-tabs-active {
+    a {
+      color: #000;
+      background-color: #fff;
+      border-bottom: 1px solid #fff;
+    }
+    a:hover {
+      color: #000;
+      background: white;
+      border-bottom: 1px solid white;
+    }
+  }
+}
+
+/* Sortable Lists */
+
+// Contains both unimportant and rank lists.
+div.ccListsDiv {
+  div {
+    .sortableList;
+  }
+}
+
+.ccPlaceholderItem {
+  .sortableListPlaceholderItem;
+}
+
+/* Changed list */
+div.ccChangedList {
+  ul {
+    // The list itself
+    li {
+      // Each list item
+    }
+  }
+}
+
+li.ccSortableListItem {
+  .sortableListItem;
+}
