@@ -805,9 +805,9 @@ class WorksheetTable {
     // XXX: Excel is 1-indexed.
     for (i = 1; i < this.height; i++) {
       if (i < this.data.length) {
-        table.append(this.constructRow(this.data[i], i+1));
+        table.append(this.constructRow(this.data[i], i));
       } else {
-        table.append(this.constructRow([], i+1));
+        table.append(this.constructRow([], i));
       }
     }
     return table;
@@ -825,7 +825,8 @@ class WorksheetTable {
     var rowHeaderCell: JQuery = this.rowHeader.find('td:contains("' + row + '")').filter(function() {
       return $(this).text() == "" + row;
     }), rowClass: string = getRowClass(this.getClassID(), row);
-    rowHeaderCell.height(Math.max.apply(Math, $('.' + rowClass).map(function(){ return $(this).height(); }).get()));
+    rowHeaderCell.parent().height($('.' + rowClass).parent().outerHeight());
+    //rowHeaderCell.height(Math.max.apply(Math, $('.' + rowClass).map(function(){ return $(this).outerHeight(); }).get()));
   }
   
   /**
