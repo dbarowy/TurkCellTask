@@ -1,5 +1,5 @@
-﻿/* The table itself */
-table.ccMain {
+/* The table itself */
+table.ccMain, table.ccHeader {
     border: 1px solid #c0c0c0;
     border-collapse: collapse;
 }
@@ -15,6 +15,8 @@ table.ccMain td, table.ccMain th {
     -ms-user-select: none;
     user-select: none;
     cursor:default;
+    min-width: 65px;
+    height: 20px;
 }
 
 /* Column AND row headers. */
@@ -31,7 +33,7 @@ th.ccHeader {
 
 /* Row headers: 1 2 3 4 5 ... */
 td.ccHeader {
-    min-width: 28px;
+    min-width: 28px !important;
     font-weight: bold;
 }
 
@@ -127,11 +129,14 @@ ul.ccTabList li.ui-tabs-active a:hover
 }
 
 .ccTab {
+    position: relative;
     border: 1px solid #aaa;
     display: inline-block;
     overflow: auto;
     width: 800px;
     height: 500px;
+    /* Fancy resize functionality in modern browsers. */
+    resize: both;
 }
 
 div.ccRankList {
@@ -184,3 +189,62 @@ div.ccListsDiv {
     list-style: none;
     height: 1em;
 }
+
+
+
+
+* {
+    box-sizing: border-box;
+}
+.topbar-wrapper {
+    height: 30px;
+    width: 100%;
+    position: absolute;
+    top: 0;
+    left: 0;
+    overflow: hidden;
+    resize: none;
+    border-collapse: both
+}
+.container {
+    padding-top: 30px;
+    height: 100%;
+}
+.container .sidebar-wrapper, .container .center-wrapper {
+    height: 100%;
+}
+.sidebar-wrapper {
+    width: 35px;
+    float: left;
+    overflow: hidden;
+    resize: none;
+}
+.center-wrapper {
+    width: 763px;
+    float: right;
+    overflow: scroll;
+}
+.center {
+    width: 150%;
+}
+.topbar {
+    height: 100%;
+    width: 150%;
+}
+/* Demo styles */
+.topbar-wrapper, .sidebar-wrapper, .center-wrapper {
+    -webkit-transform: translateZ(0);
+    -webkit-backface-visibility: hidden;
+    -webkit-perspective: 1000;
+}
+.cell {
+    width: 50px;
+    height: 30px;
+    float: left;
+    border: 1px solid black;
+}
+.sidebar .cell {
+    float: none;
+    width: 100%;
+}
+

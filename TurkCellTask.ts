@@ -545,11 +545,30 @@ class WorksheetTable {
    */
   constructor(private question: CheckCellQuestion, private name: string, private tabAnchor: JQuery, private data: DDItem[][],
     private width: number, private height: number) {
+     // TODO: Column headers and rows need to listen to cell events!
+     // can ignore context or empty cells.
+      var colHeader: JQuery = this.constructColHeader(),
+        rowHeader: JQuery = this.constructRowHeader(),
+        body: JQuery = this.constructTable(),
+        center_wrapper: JQuery = $('<div>')
+            .addClass('center-wrapper')
+            .append(body.addClass('center')),
+        container: JQuery = $('<div>')
+          .addClass('container')
+          .append(center_wrapper)
+          .append(rowHeader);
+
       this.tableDiv = $('<div>')
         .addClass('ccTab')
         .attr('id', tabAnchor.attr('href').slice(1))
         .attr('title', this.name)
-        .append(this.constructTable());
+        .append(colHeader)
+        .append(container);
+
+    center_wrapper.scroll(function (e) {
+      $('.sidebar-wrapper').scrollTop($(this).scrollTop());
+      $('.topbar-wrapper').scrollLeft($(this).scrollLeft());
+    });
   }
 
   public getName(): string { return this.name; }
@@ -685,7 +704,6 @@ class WorksheetTable {
   private constructRow(row: DDItem[], rowId: number): JQuery {
     var tr: JQuery = $('<tr>'), i: number, item: DDItem;
 
-    tr.append(this.constructBlankCell().text("" + (rowId - 1)).addClass('ccHeader'));
     // XXX: Excel is 1-indexed. Ignore the 0th cell.
     for (i = 1; i < this.width; i++) {
       item = row[i];
@@ -698,6 +716,38 @@ class WorksheetTable {
     return tr;
   }
 
+  private constructRowHeader(): JQuery {
+    var table: JQuery = $('<table>').addClass('ccHeader').addClass('sidebar'), i: number, tr: JQuery;
+    // XXX: Excel is 1-indexed.
+    for (i = 1; i < this.height; i++) {
+      tr = $('<tr>');
+      tr.append(this.constructBlankCell()
+        .addClass('ccHeader')
+        .text(i)
+      );
+      table.append(tr);
+    }
+    return $('<div>').addClass('sidebar-wrapper').append(table);
+  }
+
+  private constructColHeader(): JQuery {
+    var table: JQuery = $('<table>').addClass('ccHeader').addClass('topbar'), i: number,
+      tr = $('<tr>');
+    // Construct header.
+    tr.append($('<th>')
+      .addClass('ccHeader')
+      .addClass('ccRowHeaderHeader')
+      );
+    // XXX: Excel is 1-indexed.
+    for (i = 1; i < this.width; i++) {
+      tr.append($('<th>')
+        .addClass('ccHeader')
+        .text(getExcelColumn(i - 1))
+      );
+    }
+    return $('<div>').addClass('topbar-wrapper').append(table.append(tr));
+  }
+
   /**
    * Constructs the <table> and its header.
    */
@@ -706,19 +756,6 @@ class WorksheetTable {
       i: number, tr: JQuery = $('<tr>');
 
     table = $('<table>').addClass('ccMain');
-    // Construct header.
-    tr.append($('<th>')
-      .addClass('ccHeader')
-      .addClass('ccRowHeaderHeader')
-    );
-    // XXX: Excel is 1-indexed.
-    for (i = 1; i < this.width; i++) {
-      tr.append($('<th>')
-        .addClass('ccHeader')
-        .text(getExcelColumn(i - 1))
-      );
-    }
-    table.append(tr);
     // XXX: Excel is 1-indexed.
     for (i = 1; i < this.height; i++) {
       if (i < this.data.length) {
