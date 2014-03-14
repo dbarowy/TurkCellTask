@@ -818,7 +818,7 @@ class WorksheetTable {
       return $(this).text() == getExcelColumn(col);
     }), colClass: string = getColClass(this.getClassID(), col);
       
-   colHeaderCell.css({ 'min-width': (Math.max.apply(Math, $('.' + colClass).map(function(){ return $(this).width(); }).get())) });
+   colHeaderCell.css({ 'min-width': (Math.max.apply(Math, $('.' + colClass).map(function(){ return $(this).outerWidth(); }).get())) });
   }
   
   private updateRowHeaderCellHeight(row: number) {
