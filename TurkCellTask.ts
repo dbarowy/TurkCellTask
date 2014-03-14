@@ -612,7 +612,8 @@ class WorksheetTable {
     // Insert into page.
     this.tableDiv.find('.ccBottom-wrapper').append(bodyWrapper);
     // Update rowHeaderHeader's width.
-    this.colHeader.find('.ccRowHeaderHeader').css({ 'min-width': (this.rowHeader.width()) });
+    // XXX: -1 is a hack :(((
+    this.colHeader.find('.ccRowHeaderHeader').css({ 'min-width': (this.rowHeader.width() - 1) });
     // Update all cells, now that they are in the page.
     for (i = 0; i < this.data.length; i++) {
       row = this.data[i];

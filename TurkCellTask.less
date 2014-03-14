@@ -195,7 +195,7 @@
 // Applied to everything.
 * {
   // See http://www.paulirish.com/2012/box-sizing-border-box-ftw/
-  // box-sizing: border-box;
+  box-sizing: border-box;
   // Avoid extraneous resize toggles. I want to control what can be resized.
   resize: none;
 }
@@ -218,7 +218,7 @@ div.ccTab {
 
 div.ccTabContents {
   position: relative;
-  overflow: auto;
+  overflow: hidden;
   width: @tabWidth;
   height: @tabHeight;
   /* Fancy resize functionality in modern browsers. */
@@ -267,7 +267,7 @@ div.ccRowHeader-wrapper {
   width: @rowHeaderWidth;
   float: left;
   overflow: hidden;
-  height: 100%;
+  height: @worksheetBodyHeight;
 }
 
 table.ccRowHeader {
@@ -286,7 +286,7 @@ table.ccRowHeader {
 div.ccWorksheetBody-wrapper {
   .fast-scrolling();
   // todo: does this need to be set explicitly?
-  height: 100%;
+  height: @worksheetBodyHeight;
   width: @worksheetBodyWidth;
   float: right;
   overflow: scroll;
@@ -295,8 +295,6 @@ div.ccWorksheetBody-wrapper {
 table.ccWorksheetBody {
   border-collapse: collapse;
   //border: @normalCellBorder;
-  //height: 100%;
-  //width: 100%;
   tr {
     td {
       .normalCell;
