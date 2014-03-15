@@ -1,0 +1,76 @@
+<!DOCTYPE html>
+<html lang="en" xmlns="http://www.w3.org/1999/xhtml">
+<head>
+    <meta http-equiv="X-UA-Compatible" content="IE=Edge">
+    <meta charset="utf-8" />
+    <title>Sample CheckCell Task</title>
+    <link rel="stylesheet" href="//cdnjs.cloudflare.com/ajax/libs/jqueryui/1.10.3/css/base/jquery.ui.resizable.css" />
+    <link rel="stylesheet" type="text/css" href="TurkCellTask.css" />
+    <script type="text/javascript" src="//cdnjs.cloudflare.com/ajax/libs/jquery/1.11.0/jquery.min.js"></script>
+    <script type="text/javascript" src="//cdnjs.cloudflare.com/ajax/libs/jqueryui/1.10.3/jquery-ui.min.js"></script>
+    <script type="text/javascript" src="TurkCellTask.js"></script>
+    <script type="text/javascript">
+		var questions = [];
+	
+        var count = 3, pageLoaded = false, questionData = [], questions = [];
+		function renderData() {
+			for (var i = 0; i < questionData.length; i++) {
+				var qDiv = $('<div>');
+				$('body').prepend(qDiv);
+				questions.push(new CheckCellQuestion(questionData[i], qDiv));
+			}
+            
+		}
+		function handleData(data) {
+			questionData.push(data);
+		    if (--count === 0 && pageLoaded) {
+		      renderData();
+		    }
+		}
+
+        window.onload = function () {
+			$('#submitButton').on('click', function (ev) {
+                try {
+					var data = [];
+					for (var i = 0; i < questions.length; i++) {
+						data.push(questions[i].getRanking());
+					}
+                    alert("Output JSON: " + JSON.stringify(data));
+                } catch (e) {
+                    alert("Invalid ranking or w/e.");
+                }
+            });
+			
+			$('#submitInput').on('click', function(ev) {
+				var qObj;
+				try {
+					var qData = JSON.parse($('#inputBox').val()),
+					  qDiv = $('<div>');
+					$('body').append(qDiv);
+					qObj = new CheckCellQuestion(qData, qDiv);
+					questions.push(qObj);
+				} catch (e) {
+					if (qObj !== undefined) {
+						var idx = questions.indexOf(qObj);
+						// Remove bad question
+						if (idx > -1)
+							questions.splice(idx, 1);
+					}
+					$('#errorBox').text(e.toString());
+				}
+				
+			});
+        };
+    </script>
+</head>
+<body>
+	<div>
+		<textarea id="inputBox" cols='80' rows='20' style="resize: both;"></textarea>
+		<br />
+		<div id="errorBox"></div>
+		<br />
+		<button id="submitInput">Submit Input</button>
+	</div>
+    <button id="submitButton">Validate Rankings</button>
+</body>
+</html>
