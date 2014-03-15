@@ -781,6 +781,8 @@ class WorksheetTable {
       );
       table.append(tr);
     }
+    // Dummy row; accounts for extra scrollbar space.
+    table.append($('<tr><td></td></tr>'));
     return table;
   }
 
@@ -792,6 +794,8 @@ class WorksheetTable {
     for (i = 1; i < this.width; i++) {
       tr.append($('<th>' + getExcelColumn(i) + '</th>'));
     }
+    // Dummy column; accounts for extra scrollbar space.
+    tr.append($('<th></th>'));
     return table.append(tr);
   }
   
