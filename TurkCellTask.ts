@@ -47,6 +47,37 @@ if (!Object.keys) {
   } ());
 }
 
+if (!Array.prototype.indexOf) {
+  Array.prototype.indexOf = function (searchElement, fromIndex?) {
+    if (this === undefined || this === null) {
+      throw new TypeError('"this" is null or not defined');
+    }
+
+    var length = this.length >>> 0; // Hack to convert object.length to a UInt32
+
+    fromIndex = +fromIndex || 0;
+
+    if (Math.abs(fromIndex) === Infinity) {
+      fromIndex = 0;
+    }
+
+    if (fromIndex < 0) {
+      fromIndex += length;
+      if (fromIndex < 0) {
+        fromIndex = 0;
+      }
+    }
+
+    for (; fromIndex < length; fromIndex++) {
+      if (this[fromIndex] === searchElement) {
+        return fromIndex;
+      }
+    }
+
+    return -1;
+  };
+}
+
 // #endregion Dumb Browser Polyfills
 
 // #region JSON Typings
@@ -145,6 +176,62 @@ function nextId(): number {
 
 function coords2string(coords: SpreadsheetCoordinate): string {
   return coords.worksheet + " " + getExcelColumn(coords.x) + (coords.y);
+}
+
+/**
+ * Given two table cells, make dest the same outer width as src.
+ */
+function matchCellWidth(src: JQuery, dest: JQuery) {
+  var srcOuterWidth: number = src.outerWidth(),
+    destOuterWidth: number;
+
+  dest.css({
+    'min-width': srcOuterWidth
+  });
+
+  // After applying that change, how wide is the destination cell?
+  destOuterWidth = dest.outerWidth();
+
+  // Box model, how does it work?!
+  // The truth is, it doesn't matter. Try something, see if we come up narrow
+  // (or wide), and then adjust to the current browser's behavior. They're all
+  // subtly different.
+  if (destOuterWidth !== srcOuterWidth) {
+    dest.css({
+      'min-width': srcOuterWidth + (srcOuterWidth - destOuterWidth)
+    });
+  }
+
+  // They damn better well be equal now.
+  assert(dest.outerWidth() === srcOuterWidth);
+}
+
+/**
+ * Given two table cells, make dest the same outer height as src.
+ */
+function matchCellHeight(src: JQuery, dest: JQuery) {
+  var srcOuterHeight: number = src.outerHeight(),
+    destOuterHeight: number;
+
+  dest.css({
+    'height': srcOuterHeight
+  });
+
+  // After applying that change, how tall is the destination cell?
+  destOuterHeight = dest.outerHeight();
+
+  // Box model, how does it work?!
+  // The truth is, it doesn't matter. Try something, see if we come up short
+  // (or tall), and then adjust to the current browser's behavior. They're all
+  // subtly different.
+  if (destOuterHeight !== srcOuterHeight) {
+    dest.css({
+      'height': srcOuterHeight + (srcOuterHeight - destOuterHeight)
+    });
+  }
+
+  // They damn better well be equal now.
+  assert(dest.outerHeight() === srcOuterHeight);
 }
 
 // #endregion Helper Functions
@@ -606,14 +693,14 @@ class WorksheetTable {
   
   public fillInSkeleton(): void {
     var bodyWrapper: JQuery = this.tableDiv.find('.ccWorksheetBody-wrapper'),
-      i: number, j: number, row: DDItem[];
+      i: number, j: number, row: DDItem[],
+      rowHeaderHeader: JQuery = this.colHeader.find('.ccRowHeaderHeader');
     this.body = this.constructBody(); 
     bodyWrapper.append(this.body);
     // Insert into page.
     this.tableDiv.find('.ccBottom-wrapper').append(bodyWrapper);
     // Update rowHeaderHeader's width.
-    // XXX: -1 is a hack :(((
-    this.colHeader.find('.ccRowHeaderHeader').css({ 'min-width': (this.rowHeader.width() - 1) });
+    matchCellWidth(this.rowHeader, rowHeaderHeader);
     // Update all cells, now that they are in the page.
     for (i = 0; i < this.data.length; i++) {
       row = this.data[i];
@@ -757,16 +844,17 @@ class WorksheetTable {
    * Constructs a data row of the table.
    */
   private constructRow(row: DDItem[], rowId: number): JQuery {
-    var tr: JQuery = $('<tr>'), i: number, item: DDItem;
+    var tr: JQuery = $('<tr>'), i: number, item: DDItem, newCell: JQuery;
 
     // XXX: Excel is 1-indexed. Ignore the 0th cell.
     for (i = 1; i < this.width; i++) {
       item = row[i];
       if (typeof item === 'undefined') {
-        tr.append(this.constructBlankCell({worksheet: this.name, y: rowId, x: i}));
+        newCell = this.constructBlankCell({worksheet: this.name, y: rowId, x: i});
       } else {
-        tr.append(this.constructCell(item));
+        newCell = this.constructCell(item);
       }
+      tr.append(newCell);
     }
     return tr;
   }
@@ -817,20 +905,47 @@ class WorksheetTable {
     }
     return table;
   }
+
+  /**
+   * Find the cell element in the worksheet corresponding to the given
+   * (col, row) coordinate. col = 0 and row = 0 searches the header row.
+   */
+  private findCell(col: number, row: number): JQuery {
+    var rv: JQuery, rowElement: JQuery;
+    if (row === 0) {
+      // Handles (0, 0) edge case.
+      rv = this.colHeader.find('tr th:nth-child(' + (col + 1) + ')');
+    } else if (col === 0) {
+      // Row header search. 0-indexed
+      rv = this.rowHeader.find('tr:nth-child(' + row + ')').find(':nth-child(1)');
+    } else {
+      // General cell search.
+      // Get row.
+      rowElement = this.body.find('tr:nth-child(' + row + ')');
+      assert(rowElement.length === 1);
+      // Get col in row.
+      rv = rowElement.find('td:nth-child(' + col + ')');
+    }
+    assert(rv.length === 1);
+    return rv;
+  }
   
   private updateColHeaderCellWidth(col: number) {
-   var colHeaderCell: JQuery = this.colHeader.find('th:contains("' + getExcelColumn(col) + '")').filter(function() {
-      return $(this).text() == getExcelColumn(col);
-    }), colClass: string = getColClass(this.getClassID(), col);
-      
-   colHeaderCell.css({ 'min-width': (Math.max.apply(Math, $('.' + colClass).map(function(){ return $(this).outerWidth(); }).get())) });
+    matchCellWidth(this.findCell(col, 1), this.findCell(col, 0));
+    // Due to fun border size issues, update adjacent columns. :|
+    if (col < this.width - 1)
+      matchCellWidth(this.findCell(col + 1, 1), this.findCell(col + 1, 0));
+    if (col > 1)
+      matchCellWidth(this.findCell(col - 1, 1), this.findCell(col - 1, 0));
   }
   
   private updateRowHeaderCellHeight(row: number) {
-    var rowHeaderCell: JQuery = this.rowHeader.find('td:contains("' + row + '")').filter(function() {
-      return $(this).text() == "" + row;
-    }), rowClass: string = getRowClass(this.getClassID(), row);
-    rowHeaderCell.parent().height($('.' + rowClass).parent().outerHeight());
+    matchCellHeight(this.findCell(1, row).parent(), this.findCell(0, row));
+    // Due to fun border size issues, update adjacent rows. :|
+    if (row < this.height - 1)
+      matchCellHeight(this.findCell(1, row + 1), this.findCell(0, row + 1));
+    if (row > 1)
+      matchCellHeight(this.findCell(1, row - 1), this.findCell(0, row - 1));
   }
   
   /**
