@@ -51,6 +51,7 @@
 .perspective(@val) {
   -webkit-perspective: @val;
      -moz-perspective: @val;
+      -ms-perspective: @val;
           perspective: @val;
 }
 /*
@@ -88,7 +89,7 @@
   .normalCell;
   .headerCell !important;
   min-width: 65px;
-  padding: 0px;
+  padding: 0;
 }
 /*
   Row headers (e.g. 1 2 3 4...).
