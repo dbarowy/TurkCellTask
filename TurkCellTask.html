@@ -1,4 +1,4 @@
-<!DOCTYPE html>
+﻿<!DOCTYPE html>
 <html lang="en" xmlns="http://www.w3.org/1999/xhtml">
 <head>
     <meta http-equiv="X-UA-Compatible" content="IE=Edge">
@@ -21,7 +21,7 @@
                   "worksheet": "sheet1",
                   "orig": "12.343",
                   "err": "123.43",
-                  "outputs": [
+                  "output": [
                     {
                         "x": 6,
                         "y": 7,
@@ -49,7 +49,7 @@
                   "worksheet": "fun",
                   "orig": "10.0",
                   "err": "1.0",
-                  "outputs": [
+                  "output": [
                     {
                         "x": 6,
                         "y": 7,
@@ -77,7 +77,7 @@
                   "worksheet": "fun",
                   "orig": "10.0",
                   "err": "10.0",
-                  "outputs": [],
+                  "output": [],
                   "style": {
                       "bold": false,
                       "italic": false,
@@ -107,21 +107,44 @@
             ]
         };
 
-        var sampleQuestion;
-        window.onload = function () {
-            sampleQuestion = new CheckCellQuestion(sampleQuestion, $('#sample'));
+        var count = 3, pageLoaded = false, questionData = [], questions = [];
+		function renderData() {
+			for (var i = 0; i < questionData.length; i++) {
+				var qDiv = $('<div>');
+				$('body').prepend(qDiv);
+				questions.push(new CheckCellQuestion(questionData[i], qDiv));
+			}
             $('#submitButton').on('click', function (ev) {
                 try {
-                    alert("Output JSON: " + JSON.stringify(sampleQuestion.getRanking()));
+					var data = [];
+					for (var i = 0; i < questions.length; i++) {
+						data.push(questions[i].getRanking());
+					}
+                    alert("Output JSON: " + JSON.stringify(data));
                 } catch (e) {
                     alert("Invalid ranking or w/e.");
                 }
             });
+		}
+		function handleData(data) {
+			questionData.push(data);
+		    if (--count === 0 && pageLoaded) {
+		      renderData();
+		    }
+		}
+		
+		handleData(sampleQuestion);
+        $.getJSON("data/worksheet.json", handleData);
+        $.getJSON("data/worksheet_pretty.json", handleData);
+        window.onload = function () {
+		    pageLoaded = true;
+			if (count === 0) {
+			  renderData();
+			}
         };
     </script>
 </head>
 <body>
-    <div id="sample"></div>
     <button id="submitButton">Submit</button>
 </body>
 </html>

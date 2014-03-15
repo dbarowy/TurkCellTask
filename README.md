@@ -6,8 +6,8 @@ Client-side logic for presenting a CheckCell error-ranking question on Mechanica
 Building
 --------
 
-1. Install TypeScript and `http-server` globally.
-  * `npm install -g typescript http-server`
+1. Install TypeScript, `http-server`, and `less` globally.
+  * `npm install -g typescript http-server less`
 2. Type `make`.
   * Install [make for Windows](http://gnuwin32.sourceforge.net/packages/make.htm) if you're on Windows. Cygwin won't work.
 3. Start a local webserver with `http-server`.

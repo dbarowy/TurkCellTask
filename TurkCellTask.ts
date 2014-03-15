@@ -107,7 +107,7 @@ interface OutputInfo extends CellInfo {
  * Represents spreadsheet *inputs*.
  */
 interface InputInfo extends CellInfo {
-  outputs: {
+  output: {
     x: number;
     y: number;
     worksheet: string;
@@ -399,15 +399,15 @@ class InputItem extends ChangeObservable<InputItem> implements DDItem {
     super(['changed', 'draggableChanged']);
     var i: number, item: OutputItem;
 
-    for (i = 0; i < data.outputs.length; i++) {
+    for (i = 0; i < data.output.length; i++) {
       // Grab each item, create two-way links.
-      item = <OutputItem> graph.getItem(data.outputs[i]);
+      item = <OutputItem> graph.getItem(data.output[i]);
       assert(item.getType() === DDType.OUTPUT, "Input dependents must be outputs.");
       // Output -> input
       item.addDependency(this);
       // Input -> output
       this.dependents.push({
-        noerr: data.outputs[i].noerr,
+        noerr: data.output[i].noerr,
         output: item
       });
     }
@@ -540,7 +540,7 @@ class DataDependencyGraph {
       row = wsData[coord.y] = [];
     }
 
-    if (row.length < coord.y) {
+    if (row.length < coord.x) {
       // Pad with empty entries.
       this.data[coord.worksheet][coord.y] = row = row.concat(new Array(coord.x - row.length + 1));
     }
@@ -634,7 +634,7 @@ class WorksheetTable {
   constructor(private question: CheckCellQuestion, private name: string, private data: DDItem[][]) {
     this.width = this.calculateWidth();
     this.height = this.calculateHeight();
-    this.worksheetClassID = this.question.getClassID() + this.name;
+    this.worksheetClassID = this.question.getClassID() + encodeURIComponent(this.name);
     this.tableDiv = this.constructSkeleton();
     
     // Scroll row/col headers when body scrolls.
