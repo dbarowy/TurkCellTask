@@ -634,7 +634,7 @@ class WorksheetTable {
   constructor(private question: CheckCellQuestion, private name: string, private data: DDItem[][]) {
     this.width = this.calculateWidth();
     this.height = this.calculateHeight();
-    this.worksheetClassID = this.question.getClassID() + encodeURIComponent(this.name);
+    this.worksheetClassID = this.question.getClassID() + 'Worksheet' + nextId();
     this.tableDiv = this.constructSkeleton();
     
     // Scroll row/col headers when body scrolls.
