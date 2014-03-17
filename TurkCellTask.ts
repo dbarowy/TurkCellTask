@@ -788,7 +788,8 @@ class WorksheetTable {
                 revert: 'invalid',
                 helper: () => {
                   return $('<li class="ccSortableListItem">' + coords2string(data.getCoords()) + ': ' + input.getErrorValue() + '</li>').data("DDItem", data);
-                }
+                },
+                scroll: true
               });
           } else {
             cell.removeClass('ccInputDraggable')
@@ -1262,7 +1263,8 @@ class CheckCellQuestion {
 
 // Onload code. Fixes draggable elements in Firefox. Without this, draggable
 // elements will appear severely offset from the cursor in that browser.
-if ((<any>$).browser.mozilla) {
+// Also Opera.
+if ((<any>$).browser.mozilla || (<any>$).browser.opera) {
   $(document).ready(() => {
     $('body').css('position', 'relative');
   });
