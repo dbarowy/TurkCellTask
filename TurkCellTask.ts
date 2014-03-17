@@ -175,7 +175,7 @@ function nextId(): number {
 }
 
 function coords2string(coords: SpreadsheetCoordinate): string {
-  return coords.worksheet + " " + getExcelColumn(coords.x) + (coords.y);
+  return '"' + coords.worksheet + '":' + getExcelColumn(coords.x) + (coords.y);
 }
 
 /**
@@ -787,7 +787,7 @@ class WorksheetTable {
                 cursor: 'move',
                 revert: 'invalid',
                 helper: () => {
-                  return $('<li class="ccSortableListItem">' + coords2string(data.getCoords()) + ': ' + input.getErrorValue() + '</li>').data("DDItem", data);
+                  return $('<li class="ccSortableListItem">' + coords2string(data.getCoords()) + ' = ' + input.getErrorValue() + '</li>').data("DDItem", data);
                 },
                 scroll: true
               });
@@ -1202,7 +1202,9 @@ class CheckCellQuestion {
 
     // Throw an error if the hash is not empty.
     if (Object.keys(coords2item).length > 0) {
-      throw new Error('The following items have not been ranked: ' + JSON.stringify(Object.keys(coords2item)));
+      var err = new Error('Some items have not been ranked.');
+      (<any>err).cells = Object.keys(coords2item);
+      throw err;
     }
 
     return rv;
