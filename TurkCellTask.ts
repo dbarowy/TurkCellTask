@@ -737,7 +737,9 @@ class WorksheetTable {
   private constructCell(data: DDItem): JQuery {
     var cell: JQuery = this.constructBlankCell(data.getCoords());
     if (data.getType() === DDType.INPUT) {
-      cell.addClass('ccInput');
+      if (!(<InputItem>data).isContext()) {
+        cell.addClass('ccInput');
+      }
     } else {
       cell.addClass('ccOutput');
     }
