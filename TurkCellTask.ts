@@ -1261,10 +1261,11 @@ class CheckCellQuestion {
   }
 }
 
-// Onload code. Fixes draggable elements in Firefox. Without this, draggable
-// elements will appear severely offset from the cursor in that browser.
-// Also Opera.
-if ((<any>$).browser.mozilla || (<any>$).browser.opera) {
+// Onload code. Fixes draggable elements in Firefox, Opera, and IE8. Without
+// this, draggable elements will appear severely offset from the cursor in
+// that browser.
+// However, with this, Webkit breaks in the same way. :|
+if (!(<any>$).browser.webkit) {
   $(document).ready(() => {
     $('body').css('position', 'relative');
   });
