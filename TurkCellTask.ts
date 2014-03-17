@@ -719,7 +719,7 @@ class WorksheetTable {
   }
 
   public toggleHighlighting(enable: boolean) {
-    if (enable !== this.tabAnchor.hasClass('ccWsTabChange')) {
+    if (enable !== this.tabAnchor.hasClass('ccTabChanged')) {
       if (enable) {
         this.tabAnchor.text(this.name + '*').addClass('ccTabChanged');
       } else {
