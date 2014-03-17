@@ -1183,7 +1183,7 @@ class CheckCellQuestion {
     var unimportantList = this.unimportantList.children();
     for (i = 0; i < unimportantList.length; i++) {
       // XXX: Hack cuz list values are "coords: value".
-      coords = $(unimportantList[i]).text().split(':')[0];
+      coords = $(unimportantList[i]).text().split(' =')[0];
       item = coords2item[coords];
       delete coords2item[coords];
       assert(typeof item !== 'undefined');
@@ -1194,7 +1194,7 @@ class CheckCellQuestion {
     var rankList = this.rankedList.children();
     for (i = 0; i < rankList.length; i++) {
       // XXX: Hack cuz list values are "coords: value".
-      coords = $(rankList[i]).text().split(':')[0];
+      coords = $(rankList[i]).text().split(' =')[0];
       item = coords2item[coords];
       delete coords2item[coords];
       assert(typeof item !== 'undefined');
