@@ -1260,3 +1260,10 @@ class CheckCellQuestion {
   }
 }
 
+// Onload code. Fixes draggable elements in Firefox. Without this, draggable
+// elements will appear severely offset from the cursor in that browser.
+if ((<any>$).browser.mozilla) {
+  $(document).ready(() => {
+    $('body').css('position', 'relative');
+  });
+}
