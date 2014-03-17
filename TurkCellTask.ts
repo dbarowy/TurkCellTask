@@ -636,11 +636,12 @@ class WorksheetTable {
     this.height = this.calculateHeight();
     this.worksheetClassID = this.question.getClassID() + 'Worksheet' + nextId();
     this.tableDiv = this.constructSkeleton();
-    
+
     // Scroll row/col headers when body scrolls.
-    this.tableDiv.find('.ccWorksheetBody-wrapper').scroll(function (e) {
-      $('.ccRowHeader-wrapper').scrollTop($(this).scrollTop());
-      $('.ccColHeader-wrapper').scrollLeft($(this).scrollLeft());
+    var tDiv = this.tableDiv;
+    tDiv.find('.ccWorksheetBody-wrapper').scroll(function (e) {
+      tDiv.find('.ccRowHeader-wrapper').scrollTop($(this).scrollTop());
+      tDiv.find('.ccColHeader-wrapper').scrollLeft($(this).scrollLeft());
     });
   }
   
