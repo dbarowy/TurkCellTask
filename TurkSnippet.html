@@ -1,0 +1,73 @@
+<link href="//cdnjs.cloudflare.com/ajax/libs/jqueryui/1.10.3/css/base/jquery.ui.resizable.css" rel="stylesheet" />
+<link href="//s3.amazonaws.com/MTurkDataDebug/TurkCellTask.css" rel="stylesheet" type="text/css" /><script type="text/javascript" src="//cdnjs.cloudflare.com/ajax/libs/jquery/1.11.0/jquery.min.js"></script><script type="text/javascript" src="//ajax.googleapis.com/ajax/libs/jqueryui/1.10.4/jquery-ui.min.js"></script><script type="text/javascript" src="//cdnjs.cloudflare.com/ajax/libs/jquery-migrate/1.2.1/jquery-migrate.min.js"></script><script type="text/javascript" src="//s3.amazonaws.com/MTurkDataDebug/TurkCellTask.js"></script><script type="text/javascript">
+  var json_url = "https://s3.amazonaws.com/MTurkDataDebug/${JSONDATA}.json"
+
+  var count = 1,
+      pageLoaded = false,
+      questionData = [],
+      questions = [];
+
+  function renderData() {
+    for (var i = 0; i < questionData.length; i++) {
+      questions.push(new CheckCellQuestion(questionData[i], $("#spreadsheet")));
+    }
+    $('#submitButton').on('click', function(ev) {
+      try {
+        var data = [];
+        for (var i = 0; i < questions.length; i++) {
+          data.push(questions[i].getRanking());
+        }
+        $('#Q1').val(JSON.stringify(data))
+      } catch (e) {
+        alert("You must provide a ranking for the following cells:\n\n" + e.cells.sort().join('\n'));
+        return false;
+      }
+      return true;
+    });
+  }
+
+  function handleData(data) {
+    questionData.push(data);
+    if (--count === 0 && pageLoaded) {
+      renderData();
+    }
+  }
+
+  $.getJSON(json_url, handleData);
+  window.onload = function() {
+    pageLoaded = true;
+    if (count === 0) {
+      renderData();
+    }
+  };
+
+</script>
+<p>Your task is to help us rank spreadsheet errors by their harm.</p>
+
+<ul>
+	<li>Errors are highlighted in <span style="color: red">red</span>.</li>
+	<li>Clicking on an error will replace the error with the <span style="border: 2px solid red">correct value</span>.</li>
+	<li>Replacing the error with the correct value will also highlight any <span style="background: yellow">outputs</span> in the spreadsheet that depend on that value.</li>
+</ul>
+
+<p>You can complete the task with the following procedure:</p>
+
+<p>&nbsp;</p>
+
+<ol>
+	<li>Click each of the <span style="color: red">errors</span>, one at a time.</li>
+	<li>For each error, examine the <span style="background: yellow">outputs</span> that turn yellow to determine the <span style="color: red">error&#39;s</span> effect.</li>
+	<li>Ask yourself if the <span style="color: red">error</span> causes <b>more harm</b> or <b>less harm</b>.</li>
+	<li>Once you&#39;ve decided how harmful each <span style="color: red">error</span> is, help us rank them.
+	<ol>
+		<li>If the error is harmful, drag the red cell to the &quot;Ranked Inputs&quot; box. Make sure that the <em>most harmful</em> errors are on the top and the <em>least harmful</em> errors are on the bottom. You can rearrange the cells in the list by dragging them around.</li>
+		<li>Alternately, if the error has no important effect on the spreadsheet, drag the red cell into the &quot;Unimportant Inputs&quot; box.</li>
+	</ol>
+	</li>
+	<li>When you are done, click the &quot;Submit&quot; button.</li>
+</ol>
+
+<div id="spreadsheet">
+</div>
+
+<p><input id="Q1" type="hidden" /></p>
