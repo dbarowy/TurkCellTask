@@ -3,13 +3,16 @@ TurkCellTask
 
 Client-side logic for presenting a CheckCell error-ranking question on Mechanical Turk through JavaScript.
 
-Building
---------
+Setup
+-----
 
-1. Install TypeScript and `http-server` globally.
-  * `npm install -g typescript http-server`
-2. Type `make`.
-  * Install [make for Windows](http://gnuwin32.sourceforge.net/packages/make.htm) if you're on Windows. Cygwin won't work.
-3. Start a local webserver with `http-server`.
-4. Navigate to [`http://localhost:8080/TurkCellTask.html`](http://localhost:8080/TurkCellTask.html)
-5. There is no fifth step.
+1. Clone repository.
+2. Run `npm install`.
+
+Building / Running / Watching for Changes
+-----------------------------------------
+
+1. Run `npm start`
+2. Navigate to [`http://localhost:8080/TurkCellTask.html`](http://localhost:8080/TurkCellTask.html)
+
+When your code changes, TypeScript will auto-rebuild.

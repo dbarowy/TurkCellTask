@@ -1,5 +1,3 @@
-/// <reference path="ref/jquery.d.ts" />
-/// <reference path="ref/jqueryui.d.ts" />
 /**
  * Client-side logic for laying out a web page for a CheckCell error-ranking
  * question. Consumes a JSON blob and spits out a question in the desired div.
@@ -22,7 +20,7 @@ if (!Object.keys) {
       ],
       dontEnumsLength = dontEnums.length;
 
-    return function (obj) {
+    return function (obj: any) {
       if (typeof obj !== 'object' && (typeof obj !== 'function' || obj === null)) {
         throw new TypeError('Object.keys called on non-object');
       }
@@ -366,7 +364,7 @@ class InputItem extends ChangeObservable<InputItem> implements DDItem {
   public isContext(): boolean {
     return this.data.orig === this.data.err || this.dependents.length === 0;
   }
-  
+
   public getStyle(): CellStyle {
     return this.data.style;
   }
@@ -806,7 +804,7 @@ class CheckCellQuestion {
 
     // Ranking table.
     var sharedListClass = 'dragList' + nextId(), self = this,
-      dropHandler = function (e, ui) {
+      dropHandler = function (e: any, ui: any) {
         // Only append if this is a child element of the question div.
         if ($(ui.draggable).closest('#' + self.questionDiv.attr('id')).length > 0) {
           var item: InputItem = ui.helper.data('DDItem'),
