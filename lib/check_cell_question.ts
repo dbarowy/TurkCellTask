@@ -3,103 +3,7 @@
  * question. Consumes a JSON blob and spits out a question in the desired div.
  */
 
-// #region Dumb Browser Polyfills
-// From https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/Object/keys
-if (!Object.keys) {
-  Object.keys = (function () {
-    var hasOwnProperty = Object.prototype.hasOwnProperty,
-      hasDontEnumBug = !({ toString: null }).propertyIsEnumerable('toString'),
-      dontEnums = [
-        'toString',
-        'toLocaleString',
-        'valueOf',
-        'hasOwnProperty',
-        'isPrototypeOf',
-        'propertyIsEnumerable',
-        'constructor'
-      ],
-      dontEnumsLength = dontEnums.length;
-
-    return function (obj: any) {
-      if (typeof obj !== 'object' && (typeof obj !== 'function' || obj === null)) {
-        throw new TypeError('Object.keys called on non-object');
-      }
-
-      var result = [], prop, i;
-
-      for (prop in obj) {
-        if (hasOwnProperty.call(obj, prop)) {
-          result.push(prop);
-        }
-      }
-
-      if (hasDontEnumBug) {
-        for (i = 0; i < dontEnumsLength; i++) {
-          if (hasOwnProperty.call(obj, dontEnums[i])) {
-            result.push(dontEnums[i]);
-          }
-        }
-      }
-      return result;
-    };
-  } ());
-}
-
-// #endregion Dumb Browser Polyfills
-
-// #region JSON Typings
-
-/**
- * Represents a unique coordinate on the spreadsheet.
- */
-interface SpreadsheetCoordinate {
-  x: number;
-  y: number;
-  worksheet: string;
-}
-
-interface CellInfo extends SpreadsheetCoordinate {
-  orig: string;
-  err: string;
-}
-
-/**
- * Represents spreadsheet *outputs*.
- */
-interface OutputInfo extends CellInfo {
-  formula: string;
-}
-
-/**
- * Represents spreadsheet *inputs*.
- */
-interface InputInfo extends CellInfo {
-  outputs: {
-    x: number;
-    y: number;
-    worksheet: string;
-    noerr: string;
-  }[];
-  style: CellStyle;
-}
-
-interface CellStyle {
-  bold: boolean;
-  italic: boolean;
-  underline: boolean;
-  'font-face': string;
-  'font-size': number;
-}
-
-/**
- * Represents one question's information.
- */
-interface QuestionInfo {
-  errors: InputInfo[];
-  outputs: OutputInfo[];
-}
-
-// #endregion JSON Typings
+import {SpreadsheetCoordinate, OutputInfo, InputInfo, CellStyle, QuestionInfo} from './data_types';
 
 // #region Helper Functions
 
@@ -745,7 +649,7 @@ enum SpreadsheetStatus {
  * @todo track active cells through spreadsheets, deactivate when needed
  * @todo track/handle switching active worksheets.
  */
-class CheckCellQuestion {
+export default class CheckCellQuestion {
   private graph: DataDependencyGraph;
   private parentDiv: JQuery;
   private questionDiv: JQuery;
